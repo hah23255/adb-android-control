@@ -1,0 +1,129 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test outputs
+*.png
+*.mp4
+reports/
+evidence/
+screenshots/
+extracted_apks/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Cache
+.cache/
+*.cache
+
+# Local configuration
+.env
+.env.local
+.env.*
+config.local.json
+*.local.json
+*.local.yaml
+*.local.yml
+
+# Credentials & Secrets
+credentials/
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.keystore
+*.jks
+api_keys.txt
+tokens.txt
+auth.json
+credentials.json
+
+# Personal data
+personal/
+private/
+my_*
+*_personal.*
+*_private.*
+
+# Device-specific
+device_*.txt
+ip_addresses.txt
+pairing_codes.txt
+
+# Session data
+.adb_sessions/
+session_*.json
+
+# Backup files
+backup/
+backups/
+*.backup
+*.bkp
+
+# Build outputs
+*.apk
+*.aab
+*.aar
+
+# Test recordings
+recordings/
+*.mp4
+*.mkv
+*.webm
+
+# Claude/AI artifacts
+.claude/
+.anthropic/
+conversation_*.json
