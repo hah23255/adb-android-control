@@ -594,67 +594,181 @@ adb shell dumpsys package "$PACKAGE" | grep "permission" > "$OUTPUT_DIR/permissi
 echo "Done! Data saved to $OUTPUT_DIR"
 ```
 
-## Termux Auto-Connect
+## Termux Auto-Connect & Monitoring
 
-Persistent ADB connections for Termux on Android. Auto-reconnects when connection drops.
+Persistent ADB connections with automatic port scanning, connection monitoring, and multi-network support.
 
 ### Quick Setup
 
 ```bash
-cd termux
-./setup.sh MYDEVICE 192.168.1.100:5555
+cd ~/.claude/skills/adb-android-control/termux
+./setup.sh ZFOLD7 <DEVICE_IP_HOME>:<ADB_PORT_HOME>
 ```
 
-### Manual Setup
+This installs:
+- Auto-connect service (reconnects every 30s)
+- Boot script (starts on Termux launch)
+- Connection monitor (detects port changes)
+- Control script (`adb-control`)
 
-1. Install service:
+### adb-control Command
+
+Main control interface for all ADB automation:
+
 ```bash
-cp termux/adb-autoconnect.service $PREFIX/var/service/adb-autoconnect/run
-chmod +x $PREFIX/var/service/adb-autoconnect/run
-sv up adb-autoconnect
+adb-control status   # Show connection status, services, signal
+adb-control start    # Start all services and monitor
+adb-control stop     # Stop all services
+adb-control restart  # Restart everything
+adb-control scan     # Scan for new ADB port (30000-50000)
+adb-control log 50   # View last 50 lines of logs
+adb-control monitor  # Run monitor in foreground
 ```
 
-2. Configure devices in `~/.adb_devices`:
+### Configuration Files
+
+**~/.adb_devices** - Device addresses:
 ```bash
 # Format: NAME=IP:PORT
-ZFOLD7=<DEVICE_IP_HOME>:<ADB_PORT_HOME>
+ZFOLD7=<DEVICE_IP_HOME>:33467
 PIXEL=192.168.1.104:5555
 ```
 
-### Shell Commands
+**device.env** - Device specs and multi-network config:
+```bash
+DEVICE_SERIAL="<DEVICE_SERIAL>"
+DEVICE_ANDROID_ID="<ANDROID_ID>"
+ADB_HOME_IP="<DEVICE_IP_HOME>"
+ADB_RECONNECT_INTERVAL="30"
+```
 
-After setup, these commands are available:
+### Auto Port Scanning
+
+Android Wireless Debugging changes port on:
+- WiFi disconnect/reconnect
+- Screen lock/unlock
+- Wireless debugging toggle
+
+The system automatically:
+1. Detects connection failure
+2. Pings IP to check if host reachable
+3. Scans ports 30000-50000 for ADB
+4. Updates config with new port
+5. Reconnects automatically
+
+Manual scan:
+```bash
+python3 scripts/adb_port_scan.py <DEVICE_IP_HOME> 30000 50000
+```
+
+### Connection Monitor
+
+Continuous monitoring of ADB and WiFi state:
 
 ```bash
-adb-list              # Show configured devices with status
-adb-add NAME IP:PORT  # Add new device
-adb-connect [NAME]    # Connect to device(s)
-adb-reconnect         # Restart ADB and reconnect all
+# Check current status
+python3 scripts/connection_monitor.py status
+
+# Single check for changes
+python3 scripts/connection_monitor.py check
+
+# Continuous monitoring (runs in background on boot)
+python3 scripts/connection_monitor.py run 30
 ```
+
+**Detects:**
+- Connection drops
+- Port changes
+- Network switches
+- Signal strength changes (>10dB)
+
+**Actions:**
+- Auto-updates config on port change
+- Sends Termux notification on important events
+- Logs all events to `~/.adb_monitor.log`
+
+### Radio Scanner
+
+WiFi and Bluetooth status with signal metrics:
+
+```bash
+python3 scripts/radio_scan.py          # All info
+python3 scripts/radio_scan.py wifi     # WiFi only
+python3 scripts/radio_scan.py bluetooth # Bluetooth only
+python3 scripts/radio_scan.py caps     # Radio capabilities
+```
+
+**Output includes:**
+- SSID, BSSID, RSSI (dBm), frequency, channel
+- Link speed (TX/RX Mbps)
+- WiFi standard (802.11ac/ax)
+- MIMO support, 6GHz capability
+- Bluetooth state, connected devices
+
+### USB Device Detection
+
+Identify USB devices connected via OTG:
+
+```bash
+# List USB devices
+termux-usb -l
+
+# Identify device (grant permission when prompted)
+termux-usb -r -e scripts/usb_identify.py /dev/bus/usb/001/002
+```
+
+### Log Files
+
+| File | Contents |
+|------|----------|
+| ~/.adb_connect.log | Connection events, port changes |
+| ~/.adb_monitor.log | Monitor events, signal changes |
+| ~/.adb_state.json | Last known connection state |
+| ~/.adb_devices | Device configuration |
 
 ### Service Control
 
 ```bash
-sv status adb-autoconnect   # Check service
-sv restart adb-autoconnect  # Restart after config change
-sv down adb-autoconnect     # Stop auto-reconnect
+# Termux services
+sv status adb-autoconnect
+sv restart adb-autoconnect
+sv down adb-autoconnect
+
+# Monitor process
+cat ~/.adb_monitor.pid
+kill $(cat ~/.adb_monitor.pid)
 ```
+
+### Boot Sequence
+
+On Termux startup (`~/.termux/boot/adb-autoconnect`):
+1. Wake lock acquired
+2. Load device config
+3. Try connecting with saved port
+4. If fails → scan for new port
+5. Start auto-connect service
+6. Start connection monitor
+7. Send "ADB Ready" notification
 
 ## Python Scripts
 
-For complex automation, use the Python scripts in `./scripts/`:
+### Core Scripts
 
-### adb_controller.py
+| Script | Purpose |
+|--------|---------|
+| adb_controller.py | ADB operations with error handling |
+| adb_automation.py | UI automation, app testing |
+| adb_monitor.py | Logcat streaming, metrics |
 
-Main controller for all ADB operations with error handling and logging.
+### Termux Integration
 
-### adb_automation.py
-
-Automation workflows: app testing, UI interaction sequences, batch operations.
-
-### adb_monitor.py
-
-Real-time monitoring: logcat streaming, performance metrics, event tracking.
+| Script | Purpose |
+|--------|---------|
+| connection_monitor.py | ADB/WiFi state monitoring |
+| adb_port_scan.py | Port scanner for wireless ADB |
+| radio_scan.py | WiFi/Bluetooth scanner |
+| usb_identify.py | USB device identification |
+| adb-control.sh | Unified control interface |
 
 ## Common Key Event Codes
 

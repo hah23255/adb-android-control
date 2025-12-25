@@ -11,6 +11,11 @@ Comprehensive Android device control via ADB (Android Debug Bridge) for Claude C
 - **Shell Access**: Run commands on device
 - **Debugging**: Logcat, dumpsys, system info
 - **Automation**: Python scripts for complex workflows
+- **Auto-Connect**: Persistent wireless ADB with auto-reconnect
+- **Port Scanning**: Automatic port detection when connection changes
+- **Connection Monitor**: Real-time monitoring with notifications
+- **Radio Scanner**: WiFi/Bluetooth status, signal strength, MIMO
+- **USB Detection**: Identify USB devices via OTG
 
 ## Prerequisites
 
@@ -51,6 +56,22 @@ adb devices
 
 ## Quick Start
 
+### Auto-Connect Setup (Recommended)
+
+```bash
+# One-time setup
+cd ~/.claude/skills/adb-android-control/termux
+./setup.sh MYDEVICE 192.168.1.100:5555
+
+# Control commands (available after setup)
+adb-control status   # Show connection status
+adb-control start    # Start all services
+adb-control scan     # Find new port if changed
+adb-control log      # View connection logs
+```
+
+### Basic ADB Commands
+
 ```bash
 # Check device info
 adb shell getprop ro.product.model
@@ -66,6 +87,19 @@ adb shell input tap 500 1000
 
 # Input text
 adb shell input text "Hello"
+```
+
+### Radio & Network Status
+
+```bash
+# WiFi/Bluetooth status with signal strength
+python3 scripts/radio_scan.py
+
+# Scan for nearby WiFi networks
+adb shell cmd wifi list-scan-results
+
+# Check Bluetooth devices
+adb shell dumpsys bluetooth_manager | grep "Bonded devices" -A20
 ```
 
 ## Python Scripts
