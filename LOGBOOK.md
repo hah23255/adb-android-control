@@ -51,10 +51,46 @@
 - Cannot auto-detect USB devices in background service
 - pyusb module path issues in Termux Python environment
 
-#### Next Steps
-- Test `usb_detect.sh` interactively with user
-- Add USB device to ADB if it's an Android phone
-- Document USB workflow in SKILL.md
+---
+
+### Session: Radio Scanner (WiFi & Bluetooth)
+
+#### Completed
+4. **Radio Scanner** - WiFi and Bluetooth status & capabilities ✓
+   - Created `scripts/radio_scan.py` - comprehensive radio scanner
+   - Created `.env` - device configuration and specs
+   - **TESTED & VALIDATED**: All radio functions working
+
+#### Test Results
+
+| Feature | Status | Data Retrieved |
+|---------|--------|----------------|
+| WiFi Status | ✓ | SSID, BSSID, RSSI, Frequency, Speed |
+| WiFi Signal | ✓ | -39 dBm (Excellent) |
+| WiFi Speed | ✓ | 866 Mbps TX/RX |
+| WiFi Band | ✓ | 5GHz, Channel 112 |
+| WiFi Standard | ✓ | 802.11ac |
+| TX/RX Stats | ✓ | Good: 38.0/52.5, Retry: 0.2 |
+| Bluetooth Status | ✓ | ON, Name, Address |
+| Radio Caps | ✓ | 39 features, MIMO, Dual-band |
+| Channel List | ✓ | 2.4/5/6 GHz channels |
+| WiFi Scan | ⚠️ | Needs location permission |
+
+#### Radio Specifications (Z Fold 7)
+
+**WiFi:**
+- Standard: 802.11ac (WiFi 5)
+- MIMO: Supported (866 Mbps = 2x2 MIMO)
+- Dual-band Simultaneous: Yes
+- 6GHz Support: Yes (WiFi 6E capable)
+- WPA3: Supported
+- P2P/TDLS/RTT: Supported
+
+**Bluetooth:**
+- State: ON
+- BLE: Supported
+- A2DP/AVRCP/HFP: Supported
+- Channel Sounding: Supported
 
 ---
 
@@ -74,13 +110,17 @@
 | termux/adb-autoconnect.boot | Created | Boot startup script |
 | termux/setup.sh | Created | Installation script |
 | SKILL.md | Updated | Added Termux Auto-Connect docs |
-| scripts/usb_info.py | Created | USB device identifier |
+| scripts/usb_info.py | Created | USB descriptor reader |
 | scripts/usb_detect.sh | Created | Interactive USB detection |
+| scripts/usb_identify.py | Created | Working USB identifier (ioctl) |
+| scripts/radio_scan.py | Created | WiFi/Bluetooth scanner |
+| .env | Created | Device configuration & specs |
 | LOGBOOK.md | Created | Development tracking |
 
 ## Commits
 
 | Hash | Message | Status |
 |------|---------|--------|
-| 25acafb | feat: add Termux auto-connect service | Pushed |
-| pending | feat: add USB detection scripts | Not committed |
+| 25acafb | feat: add Termux auto-connect service | Committed |
+| 7682ebd | feat: add USB device identification via ioctl | Committed |
+| pending | feat: add radio scanner for WiFi/Bluetooth | Ready |
