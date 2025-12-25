@@ -1,19 +1,106 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# ADB Auto-Connect Service for Termux
-# Monitors and reconnects ADB devices automatically
+# ADB Auto-Connect Service for Termux (v2.0)
+# Features: Auto port scan, reconnect on port change, logging
 exec 2>&1
 
 source ~/.adb_devices 2>/dev/null
 
 INTERVAL="${ADB_RECONNECT_INTERVAL:-30}"
+PORT_SCAN_START="${ADB_PORT_SCAN_START:-30000}"
+PORT_SCAN_END="${ADB_PORT_SCAN_END:-50000}"
+LOGFILE="${HOME}/.adb_connect.log"
+MAX_LOG_LINES=500
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOGFILE"
+    # Trim log if too large
+    tail -n $MAX_LOG_LINES "$LOGFILE" > "$LOGFILE.tmp" 2>/dev/null && mv "$LOGFILE.tmp" "$LOGFILE"
+}
+
+check_port() {
+    local ip="$1" port="$2"
+    timeout 1 bash -c "echo >/dev/tcp/$ip/$port" 2>/dev/null
+}
+
+scan_adb_port() {
+    local ip="$1"
+    local start="${2:-$PORT_SCAN_START}"
+    local end="${3:-$PORT_SCAN_END}"
+
+    # Quick scan common port ranges first
+    for port in $(seq $start 1000 $end); do
+        for p in $(seq $port $((port+999))); do
+            [ $p -gt $end ] && break
+            if check_port "$ip" "$p"; then
+                result=$(timeout 3 adb connect "$ip:$p" 2>&1)
+                if [[ "$result" == *"connected"* ]]; then
+                    echo "$p"
+                    return 0
+                fi
+            fi
+        done
+    done
+    return 1
+}
+
+update_device_port() {
+    local name="$1" ip="$2" new_port="$3"
+    local new_addr="$ip:$new_port"
+
+    # Update ~/.adb_devices
+    if grep -q "^${name}=" ~/.adb_devices 2>/dev/null; then
+        sed -i "s|^${name}=.*|${name}=${new_addr}|" ~/.adb_devices
+    fi
+
+    # Reload
+    source ~/.adb_devices 2>/dev/null
+    log "PORT_UPDATED: $name -> $new_addr"
+}
+
+connect_device() {
+    local name="$1" addr="$2"
+    local ip="${addr%%:*}"
+    local port="${addr##*:}"
+
+    # Check if already connected
+    if adb devices 2>/dev/null | grep -q "$ip.*device"; then
+        return 0
+    fi
+
+    # Try current port
+    result=$(timeout 5 adb connect "$addr" 2>&1)
+    if [[ "$result" == *"connected"* ]]; then
+        log "CONNECTED: $name at $addr"
+        return 0
+    fi
+
+    # Check if IP is reachable (host up, port changed)
+    if ping -c 1 -W 1 "$ip" >/dev/null 2>&1; then
+        log "PORT_SCAN: $name IP reachable, scanning for new port..."
+
+        new_port=$(scan_adb_port "$ip")
+        if [ -n "$new_port" ] && [ "$new_port" != "$port" ]; then
+            update_device_port "$name" "$ip" "$new_port"
+            log "RECONNECTED: $name at $ip:$new_port (port changed from $port)"
+            return 0
+        fi
+    fi
+
+    log "FAILED: $name at $addr (host unreachable or ADB disabled)"
+    return 1
+}
+
+# Main loop
+log "SERVICE_START: ADB Auto-Connect v2.0"
 
 while true; do
     while IFS='=' read -r name addr; do
         [[ "$name" =~ ^#.*$ ]] && continue
         [[ -z "$addr" ]] && continue
-        if ! adb devices | grep -q "${addr%%:*}"; then
-            adb connect "$addr" >/dev/null 2>&1
-        fi
-    done < ~/.adb_devices
+        [[ -z "$name" ]] && continue
+
+        connect_device "$name" "$addr"
+    done < ~/.adb_devices 2>/dev/null
+
     sleep "$INTERVAL"
 done

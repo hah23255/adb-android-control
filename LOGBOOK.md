@@ -117,10 +117,82 @@
 | .env | Created | Device configuration & specs |
 | LOGBOOK.md | Created | Development tracking |
 
+---
+
+### Session: Multi-Network ADB & Port Scanning
+
+#### Issue Identified
+- **Problem:** WiFi network switch causes ADB port to change
+- **Root Cause:** Android Wireless Debugging assigns new port on each connection
+- **Impact:** Auto-connect service fails when port changes
+
+#### Solution Implemented
+1. **Auto Port Scanner** - `scripts/adb_port_scan.py`
+   - Scans port range 30000-50000 for ADB
+   - Updates config automatically when port changes
+   - Logs all connection events
+
+2. **Enhanced Auto-Connect Service** - v2.0
+   - Detects connection failure
+   - Pings IP to check if host reachable
+   - If reachable but port wrong → triggers port scan
+   - Updates `~/.adb_devices` with new port
+   - Logs to `~/.adb_connect.log`
+
+3. **Device Fingerprint** (Constant IDs)
+   - Serial: `<DEVICE_SERIAL>`
+   - Android ID: `<ANDROID_ID>`
+   - Build Fingerprint stored for future mDNS discovery
+
+4. **Multi-Network Config** in `device.env`
+   - Home: <DEVICE_IP_HOME> (<HOME_WIFI_SSID>)
+   - EE WiFi: <DEVICE_IP_EE>
+
+#### Edge Cases
+- WiFi switch via ADB blocked (SecurityException)
+- Port scan takes ~30-60s for full range
+- Public WiFi may have different IP on each connect
+- **Port changes frequently** - observed 3 changes in 10 minutes:
+  - <ADB_PORT_HOME> → 42729 → 33467
+- Port changes on: WiFi disconnect/reconnect, screen lock, wireless debugging toggle
+
+#### Solution: Connection Monitor
+5. **Connection Monitor** - `scripts/connection_monitor.py`
+   - Continuous monitoring of ADB connection state
+   - Detects: disconnection, port change, network change, signal change
+   - Auto-updates config on port change
+   - Sends Termux notifications on important changes
+   - Logs to `~/.adb_monitor.log`
+   - Saves state to `~/.adb_state.json`
+
+**Usage:**
+```bash
+# Single status check
+python3 scripts/connection_monitor.py status
+
+# Check for changes
+python3 scripts/connection_monitor.py check
+
+# Continuous monitoring (every 10s)
+python3 scripts/connection_monitor.py run 10
+```
+
+#### Test Results
+
+| Event | Detection | Auto-Fix |
+|-------|-----------|----------|
+| Port change (42729→33467) | ✓ Detected | ✓ Config updated |
+| Network switch (Home→EE) | ✓ Detected | ✓ IP logged |
+| Disconnection | ✓ Detected | ✓ Notification sent |
+| Signal change (>10dB) | ✓ Detected | Logged |
+
+---
+
 ## Commits
 
 | Hash | Message | Status |
 |------|---------|--------|
 | 25acafb | feat: add Termux auto-connect service | Committed |
 | 7682ebd | feat: add USB device identification via ioctl | Committed |
-| pending | feat: add radio scanner for WiFi/Bluetooth | Ready |
+| 1d47741 | feat: add radio scanner for WiFi/Bluetooth | Committed |
+| pending | feat: add auto port scan & multi-network support | Ready |
