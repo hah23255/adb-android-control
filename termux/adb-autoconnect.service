@@ -1,0 +1,19 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ADB Auto-Connect Service for Termux
+# Monitors and reconnects ADB devices automatically
+exec 2>&1
+
+source ~/.adb_devices 2>/dev/null
+
+INTERVAL="${ADB_RECONNECT_INTERVAL:-30}"
+
+while true; do
+    while IFS='=' read -r name addr; do
+        [[ "$name" =~ ^#.*$ ]] && continue
+        [[ -z "$addr" ]] && continue
+        if ! adb devices | grep -q "${addr%%:*}"; then
+            adb connect "$addr" >/dev/null 2>&1
+        fi
+    done < ~/.adb_devices
+    sleep "$INTERVAL"
+done

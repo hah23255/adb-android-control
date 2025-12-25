@@ -594,6 +594,52 @@ adb shell dumpsys package "$PACKAGE" | grep "permission" > "$OUTPUT_DIR/permissi
 echo "Done! Data saved to $OUTPUT_DIR"
 ```
 
+## Termux Auto-Connect
+
+Persistent ADB connections for Termux on Android. Auto-reconnects when connection drops.
+
+### Quick Setup
+
+```bash
+cd termux
+./setup.sh MYDEVICE 192.168.1.100:5555
+```
+
+### Manual Setup
+
+1. Install service:
+```bash
+cp termux/adb-autoconnect.service $PREFIX/var/service/adb-autoconnect/run
+chmod +x $PREFIX/var/service/adb-autoconnect/run
+sv up adb-autoconnect
+```
+
+2. Configure devices in `~/.adb_devices`:
+```bash
+# Format: NAME=IP:PORT
+ZFOLD7=<DEVICE_IP_HOME>:<ADB_PORT_HOME>
+PIXEL=192.168.1.104:5555
+```
+
+### Shell Commands
+
+After setup, these commands are available:
+
+```bash
+adb-list              # Show configured devices with status
+adb-add NAME IP:PORT  # Add new device
+adb-connect [NAME]    # Connect to device(s)
+adb-reconnect         # Restart ADB and reconnect all
+```
+
+### Service Control
+
+```bash
+sv status adb-autoconnect   # Check service
+sv restart adb-autoconnect  # Restart after config change
+sv down adb-autoconnect     # Stop auto-reconnect
+```
+
 ## Python Scripts
 
 For complex automation, use the Python scripts in `./scripts/`:
