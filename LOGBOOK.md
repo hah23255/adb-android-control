@@ -186,6 +186,29 @@ python3 scripts/connection_monitor.py run 10
 | Disconnection | ✓ Detected | ✓ Notification sent |
 | Signal change (>10dB) | ✓ Detected | Logged |
 
+#### Automation Setup
+6. **Auto-Start on Boot** - `termux/adb-autoconnect.boot v2.0`
+   - Starts on Termux launch
+   - Tries saved port, scans if fails
+   - Launches auto-connect service
+   - Starts connection monitor in background
+   - Sends notification when ready
+
+7. **Control Script** - `scripts/adb-control.sh`
+   - Installed to `~/bin/adb-control`
+   - Commands: start, stop, status, restart, scan, log, monitor
+
+**Usage:**
+```bash
+adb-control start    # Start all services
+adb-control stop     # Stop all
+adb-control status   # Show status
+adb-control scan     # Find new port
+adb-control log 100  # View logs
+```
+
+**Tested:** Monitor started (PID: 16437) ✓
+
 ---
 
 ## Commits
