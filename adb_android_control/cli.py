@@ -21,11 +21,15 @@ Subcommand layout::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 import argparse
 import json
 import logging
 import sys
-from collections.abc import Sequence
 from typing import NoReturn
 
 from adb_android_control import __version__

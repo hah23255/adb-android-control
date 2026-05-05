@@ -13,11 +13,15 @@ Doctrine note
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 import concurrent.futures
 import logging
 import socket
 import subprocess
-from collections.abc import Callable
 from pathlib import Path
 
 logger = logging.getLogger(__name__)

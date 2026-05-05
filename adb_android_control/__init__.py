@@ -33,7 +33,7 @@ __all__ = [
 ]
 
 # Submodules — importable via `from adb_android_control import <name>`
-from adb_android_control import (  # noqa: E402, F401
+from adb_android_control import (  # noqa: F401
     automation,
     connection_monitor,
     monitor,

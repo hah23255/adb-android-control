@@ -23,6 +23,11 @@ Testability
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 import json
 import logging
 import queue
@@ -30,7 +35,6 @@ import re
 import subprocess
 import threading
 import time
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
