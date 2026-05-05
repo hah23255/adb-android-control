@@ -1,87 +1,67 @@
-#!/data/data/com.termux/files/usr/bin/python3
-"""Fast ADB port scanner - finds wireless debugging port after reconnect."""
+#!/usr/bin/env python3
+"""Backwards-compatibility shim — canonical module is now
+:mod:`adb_android_control.port_scan`. CLI preserved.
 
-import socket
-import subprocess
+Will be removed in v2.0.
+"""
+
+from __future__ import annotations
+
 import sys
-import concurrent.futures
+import warnings
 from pathlib import Path
 
-def check_port(ip: str, port: int, timeout: float = 0.5) -> bool:
-    """Check if port is open."""
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(timeout)
-        result = sock.connect_ex((ip, port))
-        sock.close()
-        return result == 0
-    except:
-        return False
+from adb_android_control.port_scan import (
+    PortScanner,
+    check_port,
+    read_last_port,
+    rewrite_devices_config,
+    save_last_port,
+    try_adb_connect,
+    update_devices_file,
+)
 
-def try_adb_connect(ip: str, port: int) -> bool:
-    """Try to connect via ADB."""
-    try:
-        result = subprocess.run(
-            ["adb", "connect", f"{ip}:{port}"],
-            capture_output=True, text=True, timeout=3
-        )
-        return "connected" in result.stdout.lower()
-    except:
-        return False
+warnings.warn(
+    "scripts.adb_port_scan is deprecated; import from "
+    "adb_android_control.port_scan instead. Will be removed in v2.0.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-def scan_ports(ip: str, start: int = 30000, end: int = 45000) -> int:
-    """Scan port range for ADB."""
-    print(f"Scanning {ip} ports {start}-{end}...")
 
-    # First find open ports
-    open_ports = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-        futures = {executor.submit(check_port, ip, p): p for p in range(start, end + 1)}
-        for future in concurrent.futures.as_completed(futures):
-            port = futures[future]
-            if future.result():
-                open_ports.append(port)
-
-    print(f"Found {len(open_ports)} open ports, testing ADB...")
-
-    # Test each open port for ADB
-    for port in sorted(open_ports):
-        if try_adb_connect(ip, port):
-            return port
-
-    return 0
-
-def update_config(ip: str, port: int):
-    """Update ~/.adb_devices with new port."""
-    config_file = Path.home() / ".adb_devices"
-    if config_file.exists():
-        content = config_file.read_text()
-        # Update ZFOLD7 line
-        lines = []
-        for line in content.split('\n'):
-            if line.startswith("ZFOLD7="):
-                lines.append(f"ZFOLD7={ip}:{port}")
-            else:
-                lines.append(line)
-        config_file.write_text('\n'.join(lines))
-
-    # Save last port
-    (Path.home() / ".adb_last_port").write_text(str(port))
-
-def main():
+def main() -> None:
+    """CLI entry: scan a port range, update ``~/.adb_devices`` if found."""
     ip = sys.argv[1] if len(sys.argv) > 1 else "<DEVICE_IP_HOME>"
     start = int(sys.argv[2]) if len(sys.argv) > 2 else 30000
     end = int(sys.argv[3]) if len(sys.argv) > 3 else 45000
 
-    port = scan_ports(ip, start, end)
+    print(f"Scanning {ip} ports {start}-{end}...")  # noqa: T201
+    scanner = PortScanner()
+    port = scanner.find_adb_port(ip, start=start, end=end)
 
     if port:
-        print(f"\n✓ ADB found at {ip}:{port}")
-        update_config(ip, port)
-        print(f"Config updated. Use: adb -s {ip}:{port} shell")
+        print(f"\n✓ ADB found at {ip}:{port}")  # noqa: T201
+        update_devices_file(
+            Path.home() / ".adb_devices", name="ZFOLD7", ip=ip, port=port
+        )
+        save_last_port(Path.home() / ".adb_last_port", port)
+        print(f"Config updated. Use: adb -s {ip}:{port} shell")  # noqa: T201
     else:
-        print("\n✗ No ADB port found.")
-        print("Ensure Wireless Debugging is enabled on device.")
+        print("\n✗ No ADB port found.")  # noqa: T201
+        print("Ensure Wireless Debugging is enabled on device.")  # noqa: T201
+
+
+__all__ = [
+    "PortScanner",
+    "check_port",
+    "main",
+    "read_last_port",
+    "rewrite_devices_config",
+    "save_last_port",
+    "try_adb_connect",
+    "update_devices_file",
+]
+
 
 if __name__ == "__main__":
     main()
