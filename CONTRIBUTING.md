@@ -70,9 +70,9 @@ common pitfalls:
 
 1. **Branch.** `git checkout -b feature/your-thing`
 2. **Read the relevant doctrine sections.** Especially:
-   [the 10 Laws](docs/master-tester-doctrine/doctrine/MASTER-TESTER-DOCTRINE.md),
-   [the patterns reference](docs/master-tester-doctrine/docs/PATTERNS-REFERENCE.md),
-   [internal lesson (adaptive fault tolerance) (Adaptive Fault Tolerance)](docs/TESTING_DOCTRINE.md#lessons-extracted-from-real-failures).
+   [the 10 Laws and project entrypoint](docs/TESTING_DOCTRINE.md),
+   the lessons section in that file (Adaptive Fault Tolerance is the
+   one you'll engage most often).
 3. **Write the failing test first.** Place it under the right
    directory:
    - `tests/unit/` — default; mocks everything

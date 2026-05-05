@@ -20,9 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0-rc1] — 2026-05-05 (private)
 
 ### Added
-- **Master Tester Doctrine** (HH directive 2026-03-05) installed as the
-  canonical testing methodology. Bundle at `docs/master-tester-doctrine/`
-  (27 files); project entrypoint at `docs/TESTING_DOCTRINE.md`.
+- **Testing Doctrine** (HH directive 2026-03-05) installed as the
+  canonical testing methodology. Project entrypoint at
+  `docs/TESTING_DOCTRINE.md`. Reference bundle held privately
+  off-repo.
 - **Python package layout**: all runtime code now lives in
   `adb_android_control/` as a proper installable package with strict
   type hints throughout.
