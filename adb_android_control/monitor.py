@@ -171,7 +171,7 @@ class LogcatMonitor:
             for tag in filter_tags:
                 cmd.extend(["-s", f"{tag}:*"])
 
-        self.process = subprocess.Popen(  # noqa: S603
+        self.process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -396,7 +396,7 @@ class EventMonitor:
             cmd.extend(["-s", self.adb.device_serial])
         cmd.extend(["shell", "getevent", "-lt", device])
 
-        self.process = subprocess.Popen(  # noqa: S603
+        self.process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

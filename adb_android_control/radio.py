@@ -244,7 +244,7 @@ class RadioScanner:
     def get_wifi_via_termux() -> dict[str, Any] | None:
         """Call ``termux-wifi-connectioninfo`` and parse its JSON. ``None`` on failure."""
         try:
-            result = subprocess.run(  # noqa: S603, S607
+            result = subprocess.run(
                 ["termux-wifi-connectioninfo"],
                 capture_output=True,
                 text=True,

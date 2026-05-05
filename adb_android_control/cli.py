@@ -54,18 +54,18 @@ def cmd_devices(args: argparse.Namespace) -> int:
     ctrl = ADBController(device_serial=args.serial)
     devices = ctrl.devices()
     if not devices:
-        print("No devices connected.")  # noqa: T201
+        print("No devices connected.")
         return 1
     for d in devices:
         meta = " ".join(f"{k}={v}" for k, v in d.items() if k not in {"serial", "state"})
-        print(f"{d['serial']}\t{d['state']}\t{meta}")  # noqa: T201
+        print(f"{d['serial']}\t{d['state']}\t{meta}")
     return 0
 
 
 def cmd_info(args: argparse.Namespace) -> int:
     ctrl = ADBController(device_serial=args.serial)
     info = ctrl.get_device_info()
-    print(  # noqa: T201
+    print(
         json.dumps(
             {
                 "serial": info.serial,
@@ -99,11 +99,11 @@ def cmd_monitor(args: argparse.Namespace) -> int:
     )
 
     if args.mode == "logcat":
-        from scripts.adb_monitor import print_log_entry  # type: ignore[import-not-found]
+        from scripts.adb_monitor import print_log_entry
 
         LogcatMonitor(args.serial).stream_logs(print_log_entry, filter_level=args.level)
     elif args.mode == "perf":
-        from scripts.adb_monitor import print_snapshot  # type: ignore[import-not-found]
+        from scripts.adb_monitor import print_snapshot
 
         PerformanceMonitor(args.serial).start_monitoring(
             interval_s=args.interval, callback=print_snapshot
@@ -112,7 +112,7 @@ def cmd_monitor(args: argparse.Namespace) -> int:
         EventMonitor(args.serial).start_event_capture()
     elif args.mode == "crash":
         def _on_crash(c: CrashEvent) -> None:
-            print(f"!!! CRASH: [{c.tag}] {c.message}")  # noqa: T201
+            print(f"!!! CRASH: [{c.tag}] {c.message}")
 
         CrashMonitor(args.serial).start(callback=_on_crash)
     return 0
@@ -123,7 +123,7 @@ def cmd_workflow(args: argparse.Namespace) -> int:
 
     auto = ADBAutomation(device_serial=args.serial)
     result = auto.run_from_json(args.path)
-    print(  # noqa: T201
+    print(
         json.dumps(
             {
                 "success": result.success,
@@ -142,13 +142,13 @@ def cmd_workflow(args: argparse.Namespace) -> int:
 def cmd_health(args: argparse.Namespace) -> int:
     from adb_android_control.automation import DeviceManager
 
-    print(json.dumps(DeviceManager(device_serial=args.serial).health_check(), indent=2))  # noqa: T201
+    print(json.dumps(DeviceManager(device_serial=args.serial).health_check(), indent=2))
     return 0
 
 
 def cmd_radio(args: argparse.Namespace) -> int:
     # Reuse the print helpers in scripts/radio_scan.py — they're CLI-helpers
-    from scripts.radio_scan import (  # type: ignore[import-not-found]
+    from scripts.radio_scan import (
         print_bluetooth_status,
         print_radio_capabilities,
         print_wifi_scan,
@@ -171,7 +171,7 @@ def cmd_radio(args: argparse.Namespace) -> int:
 
 def cmd_connection(args: argparse.Namespace) -> int:
     from adb_android_control.connection_monitor import ConnectionMonitor
-    from scripts.connection_monitor import status as print_status  # type: ignore[import-not-found]
+    from scripts.connection_monitor import status as print_status
 
     mon = ConnectionMonitor()
     sub = args.subcommand or "status"
@@ -179,7 +179,7 @@ def cmd_connection(args: argparse.Namespace) -> int:
         print_status(mon)
     elif sub == "check":
         for c in mon.check():
-            print(f"{c.kind.value}: {c.detail}")  # noqa: T201
+            print(f"{c.kind.value}: {c.detail}")
     elif sub == "run":
         mon.run(interval_s=args.interval)
     return 0
@@ -191,9 +191,9 @@ def cmd_scan_port(args: argparse.Namespace) -> int:
     scanner = PortScanner()
     port = scanner.find_adb_port(args.ip, start=args.start, end=args.end)
     if port:
-        print(f"ADB found at {args.ip}:{port}")  # noqa: T201
+        print(f"ADB found at {args.ip}:{port}")
         return 0
-    print(f"No ADB port found in {args.start}-{args.end} on {args.ip}")  # noqa: T201
+    print(f"No ADB port found in {args.start}-{args.end} on {args.ip}")
     return 1
 
 
@@ -270,9 +270,9 @@ def main(argv: Sequence[str] | None = None) -> NoReturn:
     try:
         rc = args.func(args)
     except ADBError as exc:
-        print(f"adb-control: error: {exc}", file=sys.stderr)  # noqa: T201
+        print(f"adb-control: error: {exc}", file=sys.stderr)
         sys.exit(3)
     except KeyboardInterrupt:
-        print("\nInterrupted.", file=sys.stderr)  # noqa: T201
+        print("\nInterrupted.", file=sys.stderr)
         sys.exit(130)
     sys.exit(rc)

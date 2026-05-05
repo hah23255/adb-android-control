@@ -45,7 +45,7 @@ def check_port(ip: str, port: int, *, timeout_s: float = 0.5) -> bool:
 def try_adb_connect(ip: str, port: int, *, timeout_s: int = 3) -> bool:
     """Run ``adb connect ip:port`` and return True on success."""
     try:
-        result = subprocess.run(  # noqa: S603, S607
+        result = subprocess.run(
             ["adb", "connect", f"{ip}:{port}"],
             capture_output=True,
             text=True,

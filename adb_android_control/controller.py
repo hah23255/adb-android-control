@@ -419,7 +419,7 @@ class ADBController:
                 f"screenrecord --time-limit {time_limit_s} --bit-rate {bit_rate_bps} {remote_path}",
             ]
         )
-        return subprocess.Popen(argv)  # noqa: S603
+        return subprocess.Popen(argv)
 
     def get_screen_size(self) -> tuple[int, int]:
         """Return ``(width, height)`` from `wm size`. Returns ``(0, 0)`` if unparseable."""

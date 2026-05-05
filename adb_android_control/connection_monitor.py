@@ -163,7 +163,7 @@ def parse_adb_devices(output: str) -> tuple[bool, str, int]:
 def fetch_adb_status(timeout_s: int = 5) -> tuple[bool, str, int]:
     """Run ``adb devices`` and parse the result. Returns sane defaults on failure."""
     try:
-        result = subprocess.run(  # noqa: S603, S607
+        result = subprocess.run(
             ["adb", "devices"],
             capture_output=True,
             text=True,
@@ -180,7 +180,7 @@ def fetch_adb_status(timeout_s: int = 5) -> tuple[bool, str, int]:
 def fetch_wifi_info(timeout_s: int = 5) -> dict[str, Any]:
     """Call ``termux-wifi-connectioninfo``. Empty dict on failure."""
     try:
-        result = subprocess.run(  # noqa: S603, S607
+        result = subprocess.run(
             ["termux-wifi-connectioninfo"],
             capture_output=True,
             text=True,
@@ -206,7 +206,7 @@ def fetch_wifi_info(timeout_s: int = 5) -> dict[str, Any]:
 def termux_notifier(title: str, message: str) -> None:
     """Default notifier — invokes ``termux-notification``. Silent on failure."""
     try:
-        subprocess.run(  # noqa: S603, S607
+        subprocess.run(
             [
                 "termux-notification",
                 "-t", title,
