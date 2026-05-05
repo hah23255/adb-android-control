@@ -1,241 +1,238 @@
-# ADB Android Control Skill
+# adb-android-control
 
-Comprehensive Android device control via ADB (Android Debug Bridge) for Claude Code.
+> *Comprehensive Android device control via ADB — for humans, agents, and CI.*
 
-## Features
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Doctrine](https://img.shields.io/badge/Master%20Tester%20Doctrine-1.0-purple.svg)](docs/TESTING_DOCTRINE.md)
+[![Tests](https://img.shields.io/badge/tests-273-brightgreen.svg)](tests/)
+[![Test ratio](https://img.shields.io/badge/test%2Fcode-1.56%3A1-brightgreen.svg)](tests/)
+[![Type check](https://img.shields.io/badge/mypy-strict-blue.svg)](pyproject.toml)
+[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-orange.svg)](.pre-commit-config.yaml)
 
-- **App Management**: Install, uninstall, list packages, clear data
-- **File Operations**: Push/pull files, browse filesystem
-- **Screen Control**: Screenshots, screen recording
-- **Input Simulation**: Taps, swipes, text input, key events
-- **Shell Access**: Run commands on device
-- **Debugging**: Logcat, dumpsys, system info
-- **Automation**: Python scripts for complex workflows
-- **Auto-Connect**: Persistent wireless ADB with auto-reconnect
-- **Port Scanning**: Automatic port detection when connection changes
-- **Connection Monitor**: Real-time monitoring with notifications
-- **Radio Scanner**: WiFi/Bluetooth status, signal strength, MIMO
-- **USB Detection**: Identify USB devices via OTG
+A typed Python package + CLI that wraps the standard `adb` binary with
+a clean, doctrine-tested API. Pairs with **Claude Code** as a
+marketplace skill, but works equally well as a plain Python library or
+shell tool.
 
-## Prerequisites
+---
 
-- ADB installed (comes with Termux `pkg install android-tools`)
-- Android device with Developer Options enabled
-- USB debugging or Wireless debugging enabled
-
-## Installation
+## 30-second pitch
 
 ```bash
-# Install the skill
+pip install adb-android-control
+adb-control devices
+adb-control info -s EMULATOR-1
+adb-control shot screen.png
+adb-control monitor logcat
+adb-control workflow ./my-test.json
+```
+
+Built around three principles:
+
+1. **Behavioural test contracts.** Every public method has a typed test
+   exercising the failure mode it claims to handle. 273 tests today,
+   1.56 : 1 test/code ratio.
+2. **No hidden subprocess interleaving.** Every shell-out goes through
+   `ADBController` (or one flagged streaming carve-out). No `shell=True`
+   anywhere. Argv lists only.
+3. **Observable contracts.** Typed exceptions, frozen value objects,
+   wire-format-stable enum values. If we change a public name, your
+   tests will tell you.
+
+## Install
+
+### As a Python package
+
+```bash
+# From source (until PyPI publish in Phase 7)
+pip install -e ".[dev]"
+
+# Or just the runtime dependencies
+pip install -e .
+```
+
+### As a Claude Code skill
+
+```bash
+git clone https://github.com/hah23255/adb-android-control.git \
+    ~/.claude/skills/adb-android-control
 claude /plugin marketplace add ~/.claude/skills/adb-android-control
 ```
 
-## Device Connection
+## Quickstart
 
-### Wireless ADB (Recommended)
-
-1. Enable Wireless Debugging on Android device:
-   - Settings > Developer Options > Wireless Debugging
-
-2. Pair (first time only):
-   ```bash
-   adb pair <ip>:<pairing_port> <pairing_code>
-   ```
-
-3. Connect:
-   ```bash
-   adb connect <ip>:<port>
-   ```
-
-### Verify Connection
+### 1. Verify your `adb` is available
 
 ```bash
-adb devices
-# Should show: <device-ip>:<port>    device
+adb version
 ```
 
-## Quick Start
+If this fails, install Android platform-tools or `pkg install
+android-tools` on Termux.
 
-### Auto-Connect Setup (Recommended)
+### 2. Connect a device
 
+#### USB
 ```bash
-# One-time setup
-cd ~/.claude/skills/adb-android-control/termux
-./setup.sh MYDEVICE 192.168.1.100:5555
-
-# Control commands (available after setup)
-adb-control status   # Show connection status
-adb-control start    # Start all services
-adb-control scan     # Find new port if changed
-adb-control log      # View connection logs
+adb devices    # Authorize on the device when prompted
 ```
 
-### Basic ADB Commands
-
+#### Wireless (Android 11+)
 ```bash
-# Check device info
-adb shell getprop ro.product.model
-
-# Take screenshot
-adb exec-out screencap -p > screen.png
-
-# Install app
-adb install app.apk
-
-# Tap at coordinates
-adb shell input tap 500 1000
-
-# Input text
-adb shell input text "Hello"
+adb pair      <device-ip>:<pair-port>  <pair-code>
+adb connect   <device-ip>:<connect-port>
 ```
 
-### Radio & Network Status
+See [`docs/SETUP.md`](docs/SETUP.md) for screenshots of the device-side
+flow.
 
-```bash
-# WiFi/Bluetooth status with signal strength
-python3 scripts/radio_scan.py
+### 3. Use it
 
-# Scan for nearby WiFi networks
-adb shell cmd wifi list-scan-results
-
-# Check Bluetooth devices
-adb shell dumpsys bluetooth_manager | grep "Bonded devices" -A20
-```
-
-## Python Scripts
-
-Located in `scripts/`:
-
-### adb_controller.py
-
-Main controller with clean API:
+#### Python
 
 ```python
-from adb_controller import ADBController
+from adb_android_control import ADBController, DeviceOfflineError
 
-adb = ADBController()
-
-# Device info
-info = adb.get_device_info()
-print(f"Model: {info.model}")
-
-# Screenshot
-adb.screenshot('capture.png')
-
-# Input
-adb.tap(500, 1000)
-adb.input_text("Hello World")
+ctrl = ADBController()                          # raises ADBNotFoundError if adb missing
+print(ctrl.devices())                            # → list of dicts
+info = ctrl.get_device_info()                    # → DeviceInfo
+print(f"{info.model} on Android {info.android_version}")
+ctrl.screenshot("/tmp/shot.png")
 ```
 
-### adb_automation.py
-
-Workflow automation:
-
-```python
-from adb_automation import AppTester, DeviceManager
-
-# App testing
-tester = AppTester()
-tester.install_and_launch('app.apk', 'com.example.app')
-
-# Device health check
-mgr = DeviceManager()
-health = mgr.health_check()
-```
-
-### adb_monitor.py
-
-Real-time monitoring:
+#### CLI
 
 ```bash
-# Logcat streaming
-python3 scripts/adb_monitor.py logcat -l E
-
-# Performance monitoring
-python3 scripts/adb_monitor.py perf -i 5
-
-# Crash detection
-python3 scripts/adb_monitor.py crash
+adb-control devices                  # list connected devices
+adb-control info                     # JSON device snapshot
+adb-control shot                     # screenshot.png in $CWD
+adb-control monitor logcat -l W      # warning+ logcat stream
+adb-control monitor crash            # crash detector
+adb-control radio                    # WiFi + Bluetooth status
+adb-control workflow ./test.json     # run an automation workflow
+adb-control health                   # JSON health check
+adb-control --version                # 1.1.0-rc1
 ```
 
-## References
+### 4. Author a workflow
 
-- `references/keycodes.md` - Complete key event codes
-- `references/troubleshooting.md` - Common issues and solutions
-
-## Usage Examples
-
-### App Management
+```json
+{
+  "steps": [
+    { "action": "wake",       "delay": 0.5 },
+    { "action": "home",       "delay": 0.5 },
+    { "action": "start_app",  "params": {"package": "com.example.app"}, "delay": 3 },
+    { "action": "tap_center", "delay": 1 },
+    { "action": "screenshot", "params": {"path": "after_tap.png"}, "delay": 0 }
+  ]
+}
+```
 
 ```bash
-# List third-party apps
-adb shell pm list packages -3
-
-# Uninstall app
-adb uninstall com.example.app
-
-# Clear app data
-adb shell pm clear com.example.app
+adb-control workflow my-test.json
 ```
 
-### Screen Operations
+22 step kinds available — see
+[`adb_android_control/automation.py`](adb_android_control/automation.py).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  CLI["adb-control<br/>(cli.py)"] --> Ctrl["ADBController<br/>(controller.py)"]
+  CLI --> Mon["LogcatMonitor<br/>PerformanceMonitor<br/>CrashMonitor"]
+  CLI --> Auto["ADBAutomation<br/>AppTester<br/>DeviceManager"]
+  CLI --> Radio["RadioScanner"]
+  CLI --> Conn["ConnectionMonitor"]
+  CLI --> Port["PortScanner"]
+  Mon --> Ctrl
+  Auto --> Ctrl
+  Radio --> Ctrl
+  Conn --> Ctrl
+  Ctrl -.subprocess.-> ADB["adb (CLI)"]
+  ADB -.TCP/USB.-> Device["Android device"]
+  style Ctrl fill:#0066cc,color:#fff
+  style CLI fill:#009933,color:#fff
+```
+
+The full architecture deep-dive lives at
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), including
+sequence + state-machine diagrams.
+
+## Why this exists
+
+Most Android automation libraries are either:
+
+- **Java/Kotlin** (e.g. [libadb-android](https://github.com/MuntashirAkon/libadb-android)) — great for Android-app-internal usage, no help on the host.
+- **uiautomator2 / Appium** — focused on UI test automation; heavyweight install; not great for raw ADB control.
+- **Pure shell scripts** — fragile parsing; hard to test; brittle.
+
+`adb-android-control` is the missing piece: **a typed, doctrine-tested
+Python wrapper** for everything `adb` can do, with sane error
+classification and zero hidden state.
+
+## Testing — the Master Tester Doctrine
+
+This project is governed by the **Master Tester Doctrine** (HH directive
+2026-03-05). The 10 non-negotiable laws live at
+[`docs/TESTING_DOCTRINE.md`](docs/TESTING_DOCTRINE.md). Highlights:
+
+| Law | Mechanism in this repo |
+|---|---|
+| 1. Never modify a test to fix CI | pre-commit + CI test-file-integrity gate (Phase 7) |
+| 6. Never mock subprocess directly | Poison-Pill `mock_adb` fixture in `tests/conftest.py` |
+| 7. Ban `as any` in tests | `mypy --strict` with `disallow_any_explicit = true` |
+| 8. Tests must be deterministic | `freezegun`, `_sleep`/`_now` indirection, no real timers |
+
+### Run the tests
 
 ```bash
-# Screenshot
-adb exec-out screencap -p > screenshot.png
-
-# Record screen (30 seconds)
-adb shell screenrecord --time-limit 30 /sdcard/video.mp4
-adb pull /sdcard/video.mp4 ./
+pytest                       # 273 tests; ~10–20K Hypothesis examples
+pytest -m unit               # unit only (default)
+pytest -m property           # property-based fuzzing
+pytest -m race               # threading + concurrency
+pytest --cov                 # coverage report
 ```
 
-### Input Simulation
+## Project status
 
-```bash
-# Tap
-adb shell input tap 500 1000
+| Phase | Status |
+|---|---|
+| 0. Security purge | ✅ v1.0.1 shipped |
+| 1. Test foundation + 8 modules | ✅ `phase-1b-complete` |
+| 2. Code quality + CLI | ✅ `phase-2-complete` |
+| 3. Hypothesis + race + failure injection | ✅ `phase-3-complete` |
+| 4. Documentation | 🟡 in progress |
+| 5. Discoverability | ⏸️ |
+| 6. Visual polish (logo + GIFs) | ⏸️ |
+| 7. CI matrix + Codecov + CodeQL | ⏸️ |
+| 8. v2.0 GA | ⏸️ |
 
-# Swipe up
-adb shell input swipe 500 1500 500 500 300
+Currently in **private development** ahead of v2.0 public release.
+Roadmap and phase deliverables are tracked in `CHANGELOG.md`.
 
-# Type text
-adb shell input text "HelloWorld"
+## Documentation
 
-# Press home
-adb shell input keyevent 3
-```
+| Doc | Audience |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | New contributors |
+| [`docs/TESTING_DOCTRINE.md`](docs/TESTING_DOCTRINE.md) | Anyone writing tests |
+| [`docs/master-tester-doctrine/`](docs/master-tester-doctrine/) | Canonical doctrine bundle (27 files) |
+| [`SECURITY.md`](SECURITY.md) | Vulnerability reporters |
+| [`docs/MIGRATING.md`](docs/MIGRATING.md) | Users on v1.0.x |
+| [`docs/SETUP.md`](docs/SETUP.md) | First-time setup |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | When things go wrong (decision tree) |
+| [`docs/USE_CASES.md`](docs/USE_CASES.md) | Recipe gallery |
+| [`docs/TUTORIALS.md`](docs/TUTORIALS.md) | Step-by-step walkthroughs |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release history |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contributors |
 
-### System Info
+## Contributing
 
-```bash
-# Battery level
-adb shell dumpsys battery | grep level
-
-# Memory info
-adb shell dumpsys meminfo
-
-# Current activity
-adb shell dumpsys activity activities | grep mResumedActivity
-```
-
-## Current Device
-
-Connected: `<device-ip>:<port>`
-
-## Troubleshooting
-
-See `references/troubleshooting.md` for common issues.
-
-Quick fixes:
-
-```bash
-# Restart ADB
-adb kill-server && adb start-server
-
-# Reconnect
-adb disconnect && adb connect <device-ip>:<port>
-```
+PRs welcome once we hit v2.0 public. For now, see
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the doctrine-aligned workflow.
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](LICENSE).
