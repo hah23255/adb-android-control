@@ -158,17 +158,16 @@ select = [
 ignore = []
 
 [tool.ruff.lint.per-file-ignores]
-# Tests are allowed to use asserts, looser typing, and (with mypy --strict
-# off in the [[tool.mypy.overrides]] block below) more flexible Any usage.
+# Tests are allowed to use asserts, looser typing, and more flexible
+# Any usage (the latter via tests-only mypy override below).
 "tests/**/*.py" = ["S101", "ANN", "ARG", "S603", "S607"]
 # Package code: subprocess uses bare "adb" by design (PATH lookup) —
-# S607 is documented in SECURITY.md as a deliberate trade-off.
-# S603 (subprocess without check=True) is also intentional — we use
+# S607 documented in SECURITY.md as a deliberate trade-off.
+# S603 (subprocess without check=True) is intentional — we use
 # check=False and map exit codes via the typed exception hierarchy.
 "adb_android_control/**/*.py" = ["S603", "S607"]
-"scripts/**/*.py" = ["S603", "S607"]
-# CLI shims print to stdout intentionally — that's their entire purpose.
-"scripts/**/*.py" = ["T201", "T203", "S603", "S607"]
+# CLI / shims print to stdout intentionally and shell out to adb.
+"scripts/**/*.py" = ["S603", "S607", "T201", "T203"]
 "adb_android_control/cli.py" = ["T201"]
 
 [tool.ruff.format]
