@@ -19,7 +19,7 @@ from adb_android_control.controller import (
     DeviceState,
 )
 
-__version__ = "1.1.0-rc1"
+__version__ = "2.0.0"
 __all__ = [
     "ADBController",
     "ADBError",

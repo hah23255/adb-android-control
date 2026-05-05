@@ -5,17 +5,94 @@ All notable changes to `adb-android-control` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Phase 2 finishing pass
+## [2.0.0] — 2026-05-05 — Public GA 🚀
 
-### Added
-- `adb_android_control/cli.py` — unified `adb-control` console-script entrypoint
-  with subcommands: `devices`, `info`, `shot`, `monitor`, `workflow`, `health`,
-  `radio`, `connection`, `scan-port`, plus `--version` and `-v/-vv` verbosity.
-  Wired in `pyproject.toml [project.scripts]`.
-- `adb_android_control/py.typed` — PEP 561 marker so downstream consumers
-  pick up the package's type hints.
-- `requirements-dev.txt` — mirror of `pyproject.toml [project.optional-dependencies] dev`
-  for CI matrices and IDEs that don't read pyproject.
+First public release after the v1.0.x → v2.0 rebuild. The package is
+production-ready: typed, tested, documented, governed.
+
+### Headline numbers
+- **9 modules** in `adb_android_control/`, fully type-annotated
+- **273+ tests** across unit / property / race directories
+- **~1.76 : 1 test/code ratio**
+- **mypy --strict** clean with `disallow_any_explicit = true`
+- **CI matrix**: Python 3.10 / 3.11 / 3.12 × Linux / macOS
+- **Hypothesis property tests** (~10–20K examples per CI run)
+- **Race-condition + failure-injection** test suites
+- **CodeQL + gitleaks + Dependabot** integrated
+
+### Added since 1.0.x
+
+**Package & CLI**
+- Proper Python package at `adb_android_control/` with `py.typed` marker
+- Unified `adb-control` console-script (9 subcommands)
+- `pip install -e ".[dev]"` workflow for contributors
+- Backwards-compat shims at `scripts/*.py` (deprecated; will be removed in v3.0)
+
+**Typed exception hierarchy** (`adb_android_control.controller`)
+- `ADBError` (base)
+- `ADBNotFoundError`, `DeviceOfflineError`, `ADBTimeoutError`, `ADBPermissionError`
+
+**Test infrastructure**
+- Poison-Pill `subprocess.run` mock (`tests/conftest.py::PoisonPillADB`) — fails loud on unmocked argv
+- Hypothesis property tests for every pure parser
+- Race-condition tests for concurrent monitors and port-scan timing
+- Failure-injection test suite covering ADB exit codes 124 / 137 / 13 / TimeoutExpired / FileNotFoundError
+
+**Documentation**
+- `README.md` (rewritten with badges, 30-second pitch, Mermaid arch diagram)
+- `docs/ARCHITECTURE.md` (3 Mermaid diagrams, per-module responsibility table)
+- `docs/TESTING_DOCTRINE.md` (project-tailored testing entrypoint with 10 Laws)
+- `docs/MIGRATING.md` (1.0 → 1.1 → 2.0 migration paths)
+- `docs/TROUBLESHOOTING.md` (12-node Mermaid decision tree)
+- `docs/USE_CASES.md` (verified recipes)
+- `docs/PERFORMANCE.md` (methodology + baseline targets)
+- `SECURITY.md` (threat model + disclosure SLAs + CVE policy)
+- `CONTRIBUTING.md` (doctrine-aligned workflow, Conventional Commits)
+
+**CI & governance**
+- `.github/workflows/ci.yml` — 6-cell test matrix, lint, typecheck, gitleaks,
+  build, Codecov upload, Law 1 PR gate (`test-file-integrity`)
+- `.github/workflows/codeql.yml` — Python security-extended + security-and-quality
+- `.github/workflows/property-nightly.yml` — Hypothesis deep-fuzz
+  (`max_examples=1000`)
+- `.github/dependabot.yml` — pip + Actions weekly, grouped
+- `.github/PULL_REQUEST_TEMPLATE.md` — 10-Law doctrine checklist
+- `.github/ISSUE_TEMPLATE/{bug,feature,config}.yml` — structured forms with
+  PII-scrubbing requirement
+- `.github/CODEOWNERS` — high-blast-radius paths flagged
+- `.pre-commit-config.yaml` — ruff, mypy, gitleaks, markdownlint
+
+**Visual**
+- Logo SVG (512×512) + OpenGraph banner SVG (1280×640)
+- 3 VHS `.tape` recipes for demo GIFs (quickstart / monitor / reconnect)
+- Design-tokens reference
+
+**Security**
+- Full repo-history rewrite to purge v1.0.0 PII (96 file/commit hits redacted)
+- Hardened `.gitignore` patterns
+- `device.env.example` template
+- Reference-doctrine bundle held privately off-repo
+
+### Changed
+- All `subprocess.run` invocations use argv-list form (no `shell=True`)
+- timezone-aware UTC `datetime.now(tz=timezone.utc)` throughout
+- All public API uses frozen dataclasses for value objects
+- WiFiInfo / BluetoothInfo field names now carry units (`rssi_dbm`,
+  `frequency_mhz`, `link_speed_mbps`)
+- `automation.execute_step` returns typed `StepOutcome` (was `bool | str`)
+- `connection_monitor` uses typed `ChangeType` enum (was string tuples)
+
+### Deprecated
+- `from scripts.adb_* import *` — use `from adb_android_control.* import *`
+- Shims emit `DeprecationWarning` and will be removed in v3.0
+
+### Removed
+- Module-level `logging.basicConfig` from library code
+- All bare `except:` clauses in production code
+
+### Security
+- v1.0.0 device.env PII leak fully purged from history (v1.0.1 release)
+- gitleaks pre-commit + CI gate prevents recurrence
 
 ## [1.1.0-rc1] — 2026-05-05 (private)
 

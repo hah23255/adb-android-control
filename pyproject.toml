@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adb-android-control"
-version = "1.1.0-rc1"
+version = "2.0.0"
 description = "Comprehensive Android device control via ADB for Claude Code"
 readme = "README.md"
 requires-python = ">=3.10"
