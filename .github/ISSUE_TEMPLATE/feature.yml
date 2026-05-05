@@ -1,0 +1,56 @@
+name: ✨ Feature request
+description: Suggest a new capability or improvement
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you solving?
+      description: |
+        Describe the *user* problem, not the proposed solution. The
+        best feature requests start with a real frustration.
+      placeholder: When I'm trying to ... it's hard because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+      placeholder: |
+        Add `adb-control <new-thing>` that does ...
+
+        Or in Python: `ADBController.<new-method>(...)`.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      placeholder: |
+        Workaround 1: ...  (downside: ...)
+        Workaround 2: ...  (downside: ...)
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - "New CLI subcommand"
+        - "New Python API method"
+        - "New test pattern / coverage"
+        - "New documentation"
+        - "New tooling / CI capability"
+        - "Other"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: doctrine
+    attributes:
+      label: Doctrine fit
+      description: |
+        New code must satisfy the [Master Tester Doctrine](../../docs/TESTING_DOCTRINE.md).
+      options:
+        - label: I expect this feature to be testable via the existing Poison-Pill mock or DI patterns.
+        - label: I'm willing to author the feature + tests myself.

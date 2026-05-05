@@ -1,0 +1,85 @@
+name: 🐛 Bug report
+description: Something is broken or behaves unexpectedly
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report.
+
+        **Before filing:** check
+        [`docs/TROUBLESHOOTING.md`](../../docs/TROUBLESHOOTING.md) for
+        common diagnoses, and search [closed issues](../issues?q=is%3Aissue+is%3Aclosed).
+
+        **For security vulnerabilities:** do NOT file a public issue —
+        use [`SECURITY.md`](../../SECURITY.md) instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear, concise description of the bug.
+      placeholder: When I run `adb-control devices`, ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: I expected ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: |
+        The smallest code / command sequence that triggers the bug.
+        ⚠️ **Do NOT paste real device serials, BSSIDs, IPs, or
+        Bluetooth names.** Use placeholder values.
+      render: shell
+      placeholder: |
+        adb-control --version
+        adb-control devices
+        # → output here ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (PII-free dump)
+      description: Run the diagnostic dump from `docs/TROUBLESHOOTING.md` and paste the output.
+      render: shell
+      placeholder: |
+        adb-control --version
+        adb version
+        python -c "import adb_android_control as p; print(p.__version__)"
+        python -c "import sys; print(sys.version)"
+        uname -a
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "Low — annoyance / cosmetic"
+        - "Medium — workaround exists"
+        - "High — blocks normal use"
+        - "Critical — data loss / security-adjacent"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pii-scan
+    attributes:
+      label: Privacy
+      options:
+        - label: I scrubbed any device serials, BSSIDs, IPs, SSIDs, or names from this report.
+          required: true
+        - label: I checked TROUBLESHOOTING.md and closed issues first.
+          required: true

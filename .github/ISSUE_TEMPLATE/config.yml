@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security vulnerability
+    url: https://github.com/hah23255/adb-android-control/security/advisories/new
+    about: Report security issues PRIVATELY via GitHub Security Advisories — never as a public issue.
+  - name: 📖 Question / discussion
+    url: https://github.com/hah23255/adb-android-control/discussions
+    about: For "how do I ..." questions, use Discussions.
+  - name: 🩺 Troubleshooting decision tree
+    url: https://github.com/hah23255/adb-android-control/blob/main/docs/TROUBLESHOOTING.md
+    about: Most "it's broken" questions are answered here first.

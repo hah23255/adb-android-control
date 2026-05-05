@@ -1,0 +1,43 @@
+version: 2
+updates:
+  # Python deps (pip)
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/London
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - python
+    groups:
+      pytest:
+        patterns:
+          - "pytest*"
+      ruff-mypy:
+        patterns:
+          - "ruff*"
+          - "mypy*"
+      hypothesis:
+        patterns:
+          - "hypothesis"
+          - "freezegun"
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/London
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    groups:
+      actions:
+        patterns:
+          - "*"
