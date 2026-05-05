@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+import contextlib
 import json
 import logging
 import subprocess
@@ -205,7 +206,7 @@ def fetch_wifi_info(timeout_s: int = 5) -> dict[str, Any]:
 
 def termux_notifier(title: str, message: str) -> None:
     """Default notifier — invokes ``termux-notification``. Silent on failure."""
-    try:
+    with contextlib.suppress(FileNotFoundError, subprocess.TimeoutExpired):
         subprocess.run(
             [
                 "termux-notification",
@@ -216,8 +217,6 @@ def termux_notifier(title: str, message: str) -> None:
             timeout=5,
             check=False,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
 
 
 def null_notifier(_title: str, _message: str) -> None:

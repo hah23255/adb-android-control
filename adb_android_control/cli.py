@@ -148,13 +148,13 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 def cmd_radio(args: argparse.Namespace) -> int:
     # Reuse the print helpers in scripts/radio_scan.py — they're CLI-helpers
+    from adb_android_control.radio import RadioScanner
     from scripts.radio_scan import (
         print_bluetooth_status,
         print_radio_capabilities,
         print_wifi_scan,
         print_wifi_status,
     )
-    from adb_android_control.radio import RadioScanner
 
     scanner = RadioScanner(device_serial=args.serial)
     sections = args.sections or ["all"]

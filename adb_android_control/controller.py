@@ -106,11 +106,12 @@ class ADBController:
     availability is verified eagerly during construction.
     """
 
-    # Class-level annotation so MagicMock(spec_set=ADBController) sees
+    # Class-level default so MagicMock(spec_set=ADBController) sees
     # this attribute (Doctrine Pattern: Poison-Pill Mock — strict mocks
-    # only allow attributes that introspect via dir(cls); instance-only
-    # attrs set in __init__ are invisible at the class level).
-    device_serial: str | None
+    # introspect via dir(cls); a class-level annotation alone is invisible
+    # to dir(), so we provide an explicit default that __init__ overrides
+    # per-instance).
+    device_serial: str | None = None
 
     def __init__(self, device_serial: str | None = None) -> None:
         self.device_serial = device_serial
