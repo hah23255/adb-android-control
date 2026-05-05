@@ -218,7 +218,6 @@ Roadmap and phase deliverables are tracked in `CHANGELOG.md`.
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | New contributors |
 | [`docs/TESTING_DOCTRINE.md`](docs/TESTING_DOCTRINE.md) | Anyone writing tests |
-| [`docs/master-tester-doctrine/`](docs/master-tester-doctrine/) | Canonical doctrine bundle (27 files) |
 | [`SECURITY.md`](SECURITY.md) | Vulnerability reporters |
 | [`docs/MIGRATING.md`](docs/MIGRATING.md) | Users on v1.0.x |
 | [`docs/SETUP.md`](docs/SETUP.md) | First-time setup |

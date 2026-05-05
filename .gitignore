@@ -141,3 +141,6 @@ personal/
 assets/logo/*.png
 assets/social/*.png
 assets/demos/*.gif
+
+# Reference doctrine bundle (held privately off-repo)
+docs/master-tester-doctrine/

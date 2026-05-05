@@ -4,10 +4,9 @@
 # Default: maintainer reviews everything
 *           @hah23255
 
-# Doctrine: any change to the testing doctrine bundle or project
-# entrypoint requires explicit maintainer review (no automatic
-# auto-approve, no codeowner skip).
-/docs/master-tester-doctrine/*  @hah23255
+# Doctrine: any change to the project testing entrypoint or the
+# Poison-Pill harness requires explicit maintainer review (no
+# automatic auto-approve, no codeowner skip).
 /docs/TESTING_DOCTRINE.md       @hah23255
 /tests/conftest.py              @hah23255
 

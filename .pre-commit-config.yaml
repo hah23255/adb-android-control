@@ -71,10 +71,8 @@ repos:
 default_language_version:
   python: python3.10
 
-# Files that are reference-only (canonical doctrine bundle) skip linting —
-# we don't reformat upstream content.
+# Files that should be skipped by all hooks.
 exclude: |
   (?x)^(
-    docs/master-tester-doctrine/.*|
     \.git/.*
   )$
