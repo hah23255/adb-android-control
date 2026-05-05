@@ -192,6 +192,15 @@ class ADBController:
         """Run a shell command on the device. See module-level security note."""
         return self._run(["shell", cmd], timeout=timeout)
 
+    def shell(self, cmd: str, *, timeout: int = DEFAULT_TIMEOUT_S) -> str:
+        """Public counterpart to :meth:`_shell` — run a shell command on the device.
+
+        Doctrine Law 2: Other modules in the package compose against this
+        public method instead of reaching into ``_shell``. See module-level
+        security note for the injection-surface caveat.
+        """
+        return self._shell(cmd, timeout=timeout)
+
     # ---------------------------------------------------------- device mgmt
 
     def devices(self) -> list[dict[str, str]]:
