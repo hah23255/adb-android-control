@@ -136,3 +136,8 @@ device.env
 LOGBOOK.md
 private/
 personal/
+
+# Generated visual assets (sources tracked, renders are not)
+assets/logo/*.png
+assets/social/*.png
+assets/demos/*.gif

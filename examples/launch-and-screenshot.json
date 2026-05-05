@@ -1,0 +1,39 @@
+{
+  "name": "Launch app and capture initial screen",
+  "description": "Reference workflow used by the README and quickstart demo.",
+  "version": "1.0",
+  "steps": [
+    {
+      "action": "wake",
+      "delay": 0.5,
+      "description": "Wake the device if it's asleep"
+    },
+    {
+      "action": "home",
+      "delay": 0.5,
+      "description": "Return to home screen"
+    },
+    {
+      "action": "start_app",
+      "params": { "package": "com.android.settings" },
+      "delay": 3,
+      "description": "Launch Settings as a known-installed target"
+    },
+    {
+      "action": "screenshot",
+      "params": { "path": "settings-launched.png" },
+      "delay": 0,
+      "description": "Capture the initial Settings screen"
+    },
+    {
+      "action": "back",
+      "delay": 0.5,
+      "description": "Return"
+    },
+    {
+      "action": "home",
+      "delay": 0,
+      "description": "Final home"
+    }
+  ]
+}

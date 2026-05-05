@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="adb-android-control logo">
+  <title>adb-android-control</title>
+  <desc>An Android-droid silhouette wrapped in a terminal frame, signalling control via ADB.</desc>
+
+  <!-- Background card -->
+  <rect width="512" height="512" rx="64" ry="64" fill="#0d1b2a"/>
+
+  <!-- Terminal frame -->
+  <rect x="64" y="96" width="384" height="320" rx="16" ry="16" fill="#1b263b" stroke="#415a77" stroke-width="3"/>
+
+  <!-- Terminal title bar -->
+  <rect x="64" y="96" width="384" height="36" rx="16" ry="16" fill="#1b263b"/>
+  <rect x="64" y="120" width="384" height="12" fill="#1b263b"/>
+  <line x1="64" y1="132" x2="448" y2="132" stroke="#415a77" stroke-width="2"/>
+  <circle cx="86" cy="114" r="6" fill="#e63946"/>
+  <circle cx="108" cy="114" r="6" fill="#f1c40f"/>
+  <circle cx="130" cy="114" r="6" fill="#2ecc71"/>
+
+  <!-- Android-droid silhouette, simplified -->
+  <g transform="translate(176,164)">
+    <!-- Antennas -->
+    <line x1="32" y1="-4" x2="22" y2="-22" stroke="#a8dadc" stroke-width="6" stroke-linecap="round"/>
+    <line x1="128" y1="-4" x2="138" y2="-22" stroke="#a8dadc" stroke-width="6" stroke-linecap="round"/>
+
+    <!-- Head (semi-circle on top) -->
+    <path d="M 0,40 A 80,60 0 0 1 160,40 L 160,40 Z" fill="#a8dadc"/>
+
+    <!-- Eyes -->
+    <circle cx="48" cy="20" r="6" fill="#0d1b2a"/>
+    <circle cx="112" cy="20" r="6" fill="#0d1b2a"/>
+
+    <!-- Body -->
+    <rect x="0" y="48" width="160" height="120" rx="8" ry="8" fill="#a8dadc"/>
+
+    <!-- Arms -->
+    <rect x="-24" y="56" width="20" height="100" rx="10" ry="10" fill="#a8dadc"/>
+    <rect x="164" y="56" width="20" height="100" rx="10" ry="10" fill="#a8dadc"/>
+
+    <!-- Legs -->
+    <rect x="32" y="172" width="24" height="60" rx="12" ry="12" fill="#a8dadc"/>
+    <rect x="104" y="172" width="24" height="60" rx="12" ry="12" fill="#a8dadc"/>
+  </g>
+
+  <!-- Terminal prompt below -->
+  <text x="84" y="424" font-family="ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace"
+        font-size="22" fill="#e0fbfc" font-weight="600">
+    <tspan fill="#83c5be">$</tspan> adb-control<tspan fill="#83c5be">_</tspan>
+  </text>
+
+  <!-- Wordmark, bottom-right outside the terminal frame -->
+  <text x="448" y="476" text-anchor="end" font-family="ui-sans-serif, system-ui, sans-serif"
+        font-size="14" fill="#778da9" letter-spacing="2">
+    ADB · ANDROID · CONTROL
+  </text>
+</svg>

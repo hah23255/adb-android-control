@@ -1,15 +1,15 @@
 {
   "name": "adb-android-control",
   "owner": {
-    "name": "ADB Android Control",
-    "url": "https://github.com/adb-android-control/adb-android-control"
+    "name": "hah23255",
+    "url": "https://github.com/hah23255/adb-android-control"
   },
   "metadata": {
-    "description": "Android device control via ADB",
-    "version": "1.0.0",
+    "description": "Comprehensive Android device control via ADB — typed Python package + CLI + Claude Code skill, doctrine-tested with 273 tests",
+    "version": "1.1.0-rc1",
     "license": "MIT",
     "created": "2025-12-25",
-    "updated": "2025-12-25"
+    "updated": "2026-05-05"
   },
   "plugins": [
     {
