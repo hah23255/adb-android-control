@@ -127,3 +127,12 @@ recordings/
 .claude/
 .anthropic/
 conversation_*.json
+
+# === PII / device-specific (post-incident hardening 2026-05-05) ===
+# v1.0.0 leaked device.env — patterns below close that hole.
+device.env
+*.env
+!*.env.example
+LOGBOOK.md
+private/
+personal/
