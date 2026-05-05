@@ -1,461 +1,238 @@
-# Contributing to ADB Android Control
+# Contributing to `adb-android-control`
 
-Thank you for your interest in contributing to ADB Android Control! This document provides guidelines and instructions for contributing.
+> *Thanks for your interest. This project is governed by the
+> [Master Tester Doctrine](docs/TESTING_DOCTRINE.md). Read it before
+> writing tests. The 10 Laws are non-negotiable.*
 
-## Table of Contents
+## Quick links
 
-1. [Code of Conduct](#code-of-conduct)
-2. [Getting Started](#getting-started)
-3. [How to Contribute](#how-to-contribute)
-4. [Development Setup](#development-setup)
-5. [Coding Standards](#coding-standards)
-6. [Commit Guidelines](#commit-guidelines)
-7. [Pull Request Process](#pull-request-process)
-8. [Documentation](#documentation)
-9. [Testing](#testing)
-10. [Review Process](#review-process)
-
----
+- [Doctrine — must-read before writing tests](docs/TESTING_DOCTRINE.md)
+- [Architecture — module responsibilities](docs/ARCHITECTURE.md)
+- [Migration guide for v1.0.x users](docs/MIGRATING.md)
+- [Security policy + reporting channel](SECURITY.md)
+- [Troubleshooting decision tree](docs/TROUBLESHOOTING.md)
 
 ## Code of Conduct
 
-### Our Pledge
+Be respectful. Be constructive. Be patient. Disagreements about
+technical decisions are healthy; disagreements about people are
+not.
 
-We are committed to providing a welcoming and inclusive environment for all contributors.
+Reports of unacceptable conduct can be sent privately via the
+channels in [`SECURITY.md`](SECURITY.md).
 
-### Standards
-
-- Use welcoming and inclusive language
-- Be respectful of differing viewpoints
-- Accept constructive criticism gracefully
-- Focus on what is best for the community
-
-### Enforcement
-
-Unacceptable behavior may be reported to the maintainers.
-
----
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
-- Git installed
-- ADB installed (`pkg install android-tools` on Termux)
-- Python 3.8+ (for scripts)
-- Android device with USB/Wireless debugging enabled
+| Tool | Why | Install |
+|---|---|---|
+| `python` 3.10+ | Runtime | system package or [pyenv](https://github.com/pyenv/pyenv) |
+| `adb` | What we wrap | `pkg install android-tools` (Termux) / `brew install --cask android-platform-tools` / `apt install adb` |
+| `git` | Source control | system package |
+| `pre-commit` | Local hook runner | `pip install pre-commit` |
 
-### Fork and Clone
+### Fork + clone + install
 
 ```bash
-# Fork the repository on GitHub
-
-# Clone your fork
-git clone https://github.com/YOUR_USERNAME/adb-android-control.git
+gh repo fork hah23255/adb-android-control --clone
 cd adb-android-control
-
-# Add upstream remote
-git remote add upstream https://github.com/ORIGINAL_OWNER/adb-android-control.git
+pip install -e ".[dev]"
+pre-commit install
 ```
 
----
-
-## How to Contribute
-
-### Types of Contributions
-
-#### 1. Bug Reports
-
-Found a bug? Open an issue with:
-- Clear, descriptive title
-- Steps to reproduce
-- Expected vs actual behavior
-- Device info (model, Android version)
-- ADB version (`adb version`)
-
-#### 2. Feature Requests
-
-Have an idea? Open an issue with:
-- Clear description of the feature
-- Use case / why it's useful
-- Possible implementation approach
-
-#### 3. Documentation
-
-Help improve docs:
-- Fix typos or unclear explanations
-- Add examples
-- Translate to other languages
-- Add tutorials
-
-#### 4. Code Contributions
-
-- Fix bugs
-- Implement new features
-- Improve performance
-- Add tests
-
----
-
-## Development Setup
-
-### Environment Setup
+Verify everything works:
 
 ```bash
-# Clone repository
-git clone https://github.com/YOUR_USERNAME/adb-android-control.git
-cd adb-android-control
-
-# Create virtual environment (optional but recommended)
-python3 -m venv venv
-source venv/bin/activate
-
-# Install development dependencies
-pip install pytest black flake8 mypy
+ruff check .
+mypy adb_android_control
+pytest -q
 ```
 
-### Verify Setup
+All three should pass on a fresh clone.
 
-```bash
-# Check ADB
-adb version
+## The doctrine-aligned workflow
 
-# Check Python scripts syntax
-python3 -m py_compile scripts/adb_controller.py
-python3 -m py_compile scripts/adb_automation.py
-python3 -m py_compile scripts/adb_monitor.py
+This project follows the **Master Tester Doctrine** end-to-end. Before
+your PR can land, it must align with the 10 Laws + Patterns. The most
+common pitfalls:
 
-# Run basic test
-python3 scripts/adb_controller.py
-```
+| Pitfall | Doctrine Law | What to do instead |
+|---|---|---|
+| Modifying a test to make CI pass | **Law 1** | Fix the production code. If the test is genuinely wrong, open a separate PR explaining *why* with reviewer sign-off — never combine with a "make CI green" change. |
+| Asserting `obj._private_field == ...` | **Law 2** | Test the public method that observes the private field's effect. |
+| One test per dataclass field | **Law 9** | One test per *behaviour*. A factory test is one concept; a getter test isn't usually a concept. |
+| `subprocess.run` mocked directly | **Law 6** | Use the `mock_adb` Poison-Pill fixture from `tests/conftest.py`. |
+| `# type: ignore` in a test | **Law 7** | Reshape the type to be testable, or use `cast(SomeRealType, ...)` with rationale. The only allowed exception is `# noqa: B017` for frozen-dataclass `with pytest.raises(Exception):` patterns. |
+| `time.sleep(0.1)` in a test | **Law 8** | Use `freezegun` or inject the clock via the production code's `_now`/`now_fn` indirection. |
 
----
+### Test-first workflow (recommended)
 
-## Coding Standards
+1. **Branch.** `git checkout -b feature/your-thing`
+2. **Read the relevant doctrine sections.** Especially:
+   [the 10 Laws](docs/master-tester-doctrine/doctrine/MASTER-TESTER-DOCTRINE.md),
+   [the patterns reference](docs/master-tester-doctrine/docs/PATTERNS-REFERENCE.md),
+   [internal lesson (adaptive fault tolerance) (Adaptive Fault Tolerance)](docs/TESTING_DOCTRINE.md#lessons-extracted-from-real-failures).
+3. **Write the failing test first.** Place it under the right
+   directory:
+   - `tests/unit/` — default; mocks everything
+   - `tests/property/` — Hypothesis property-based
+   - `tests/race/` — threading + concurrency
+   - `tests/integration/` — needs real `adb` (skipped by default)
+   - `tests/quarantine/` — known-flaky (must have an open issue link)
+4. **Implement the production code** until the test passes.
+5. **Run the full suite.** `pytest -q` — including property + race.
+6. **Run the linters.** `ruff check .`, `mypy adb_android_control`,
+   `pre-commit run --all-files`.
+7. **Commit** following Conventional Commits (see below).
+8. **Push and open a PR** with the [PR template](.github/PULL_REQUEST_TEMPLATE.md)
+   filled in (forthcoming in Phase 7).
 
-### Python Code
+## Coding standards
 
-#### Style Guide
+- **Strict mypy.** No `Any` annotations (`disallow_any_explicit = true`).
+  No `# type: ignore` in production code; rare exceptions in tests are
+  flagged by reviewers.
+- **Ruff** for lint + format. Trailing whitespace, import order,
+  pep8-naming, flake8-bugbear, flake8-bandit, flake8-use-pathlib,
+  pyupgrade, etc. — all enforced.
+- **Frozen dataclasses** for value objects. Mutable state lives in
+  classes with explicit lifecycles.
+- **Pure functions** for parsers, converters, predicates. They live
+  at module level so tests can target them directly (Law 9).
+- **Dependency injection** for I/O. Class constructors accept
+  `adb=ADBController()`, `notifier=...`, `now_fn=...`, etc., so tests
+  can substitute fakes (Laws 5 + 6).
+- **No `shell=True`.** Argv lists only. `subprocess` calls use
+  `check=False` and explicit error mapping.
+- **No bare `except:`.** Use specific exception classes. Where you
+  must catch broadly for graceful degradation (internal lesson (adaptive fault tolerance)), comment
+  the rationale inline.
+- **Library code does NOT call `logging.basicConfig`.** That's the
+  application's concern; we install logging only in `cli.py`.
 
-Follow PEP 8 with these specifics:
+## Commit guidelines
 
-```python
-# Good: Clear, descriptive names
-def get_device_battery_level() -> int:
-    """Get current battery level percentage."""
-    pass
-
-# Bad: Unclear names
-def get_bat():
-    pass
-```
-
-#### Type Hints
-
-Use type hints for function signatures:
-
-```python
-from typing import Optional, List, Dict
-
-def install_apk(
-    apk_path: str,
-    replace: bool = True,
-    grant_permissions: bool = False
-) -> bool:
-    """Install APK on device."""
-    pass
-```
-
-#### Docstrings
-
-Use Google-style docstrings:
-
-```python
-def tap(x: int, y: int, duration_ms: int = 0) -> None:
-    """
-    Simulate tap at screen coordinates.
-
-    Args:
-        x: Horizontal coordinate (pixels from left)
-        y: Vertical coordinate (pixels from top)
-        duration_ms: Long press duration (0 for normal tap)
-
-    Raises:
-        ADBError: If device not connected
-
-    Example:
-        >>> adb.tap(540, 1200)
-        >>> adb.tap(540, 1200, duration_ms=1000)  # Long press
-    """
-    pass
-```
-
-#### Error Handling
-
-```python
-# Good: Specific exceptions with context
-try:
-    result = subprocess.run(cmd, capture_output=True, timeout=30)
-except subprocess.TimeoutExpired:
-    raise ADBError(f"Command timed out: {' '.join(cmd)}")
-except FileNotFoundError:
-    raise ADBError("ADB not found. Is it installed?")
-
-# Bad: Generic exception handling
-try:
-    result = subprocess.run(cmd)
-except:
-    pass
-```
-
-### Bash Scripts
-
-```bash
-#!/bin/bash
-# Script description
-# Usage: script.sh <arg1> <arg2>
-
-set -e  # Exit on error
-
-# Constants in UPPER_CASE
-readonly TIMEOUT=30
-
-# Functions with descriptive names
-check_device_connection() {
-    if ! adb devices | grep -q "device$"; then
-        echo "Error: No device connected" >&2
-        return 1
-    fi
-}
-
-# Main logic
-main() {
-    check_device_connection || exit 1
-    # ... rest of script
-}
-
-main "$@"
-```
-
-### Documentation
-
-- Use Markdown
-- Include code examples
-- Keep language clear and concise
-- Add table of contents for long documents
-
----
-
-## Commit Guidelines
-
-### Commit Message Format
+We use [Conventional Commits](https://www.conventionalcommits.org/).
+Format:
 
 ```
 <type>(<scope>): <subject>
 
-<body>
+<body — wrap at 72 chars; explain *why*, not what>
 
-<footer>
+<optional footer — Co-Authored-By, Closes #N, etc.>
 ```
 
-### Types
+**Types:** `feat`, `fix`, `refactor`, `test`, `docs`, `chore`,
+`security`, `perf`, `revert`, `ci`, `build`.
 
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation only
-- `style`: Formatting, no code change
-- `refactor`: Code restructuring
-- `test`: Adding tests
-- `chore`: Maintenance tasks
+**Scopes:** module names without `_` prefixes — `controller`,
+`monitor`, `automation`, `radio`, `connection_monitor`, `port_scan`,
+`usb`, `cli`, `tests`, `docs`, `ci`. For multi-scope changes use
+`comma,separated` or `<scope>+`.
 
 ### Examples
 
 ```
-feat(input): add multi-touch gesture support
+test(controller): add Hypothesis property fuzzing on _BATTERY_LEVEL_RE
 
-Add support for simulating multi-touch gestures using
-the input event system.
+Adds three property tests covering the regex's never-raises invariant
+plus the well-formed-line round-trip identity. Closes the v1.1.0-rc1
+property-coverage gap surfaced in code review.
 
-Closes #123
+Co-Authored-By: …
 ```
 
 ```
-fix(connection): handle device disconnect gracefully
+fix(monitor): handle EOF mid-line in LogcatMonitor._read_loop
 
-Previously, disconnect during file transfer caused crash.
-Now properly catches exception and reports error.
+Reproduces deterministically with a SIGTERM mid-readline injection.
+The pre-fix path raised AttributeError on the truncated stdout.
 
-Fixes #456
+Closes #42
 ```
 
-```
-docs(setup): add Samsung-specific instructions
+### What NOT to do
 
-Add detailed steps for enabling debugging on Samsung
-devices with Knox.
-```
+- ❌ Don't combine refactors with bug fixes in one commit.
+- ❌ Don't include "WIP" or "fix typo" commits in PRs — squash before
+  merge.
+- ❌ Don't skip the body unless the change is genuinely trivial.
 
-### Rules
+## Pull request process
 
-- Use imperative mood ("add" not "added")
-- First line max 72 characters
-- Body wrapped at 72 characters
-- Reference issues when applicable
-
----
-
-## Pull Request Process
-
-### Before Submitting
-
-- [ ] Code follows style guidelines
-- [ ] Self-reviewed changes
-- [ ] Added/updated documentation
-- [ ] Added tests if applicable
-- [ ] All tests pass
-- [ ] Commits are clean and well-described
-
-### Submitting PR
-
-1. Create feature branch:
-   ```bash
-   git checkout -b feature/my-feature
-   ```
-
-2. Make changes and commit:
-   ```bash
-   git add .
-   git commit -m "feat: add my feature"
-   ```
-
-3. Push to your fork:
-   ```bash
-   git push origin feature/my-feature
-   ```
-
-4. Open PR on GitHub
-
-### PR Description Template
-
-```markdown
-## Description
-Brief description of changes.
-
-## Type of Change
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Documentation update
-- [ ] Refactoring
-- [ ] Other (describe)
-
-## Testing
-Describe how you tested the changes.
-
-## Checklist
-- [ ] Code follows style guidelines
-- [ ] Documentation updated
-- [ ] Tests added/updated
-- [ ] All tests pass
-
-## Related Issues
-Closes #XXX
-```
-
----
+1. Open a draft PR early; you don't have to wait until it's green.
+2. The PR template asks specifically for:
+   - Which Doctrine Laws the change engages
+   - Which test directory the new tests live in
+   - Whether any test files were modified (Law 1 gate)
+3. CI runs lint, typecheck, tests, coverage delta — all must pass.
+4. At least one reviewer must approve. For doctrine-violation
+   exceptions (e.g., a deliberately weak test for a known-broken
+   subsystem), maintainer sign-off required.
+5. Squash-merge is the default. Maintainer may request a rebase
+   merge for multi-commit feature branches with clean history.
 
 ## Documentation
 
-### Where to Document
+If your change adds public API, update:
 
-| Type | Location |
-|------|----------|
-| Command reference | SKILL.md |
-| Setup instructions | docs/SETUP.md |
-| Use cases | docs/USE_CASES.md |
-| Error handling | docs/ERROR_HANDLING.md |
-| Best practices | docs/GUIDELINES.md |
-| Tutorials | docs/TUTORIALS.md |
-| API reference | Code docstrings |
+- The relevant module docstring
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) if architectural
+- [`docs/USE_CASES.md`](docs/USE_CASES.md) with a new UC entry if
+  user-visible
+- [`CHANGELOG.md`](CHANGELOG.md) under `[Unreleased]`
 
-### Documentation Standards
-
-- Clear, concise language
-- Working code examples
-- Tested commands
-- Updated for all changes
-
----
+For docs-only changes, no test changes are required, but `markdownlint`
+runs in pre-commit.
 
 ## Testing
 
-### Running Tests
+See [`docs/TESTING_DOCTRINE.md`](docs/TESTING_DOCTRINE.md) for the
+full doctrine. Quick reference:
 
 ```bash
-# Test Python syntax
-python3 -m py_compile scripts/*.py
-
-# Test imports
-python3 -c "from scripts.adb_controller import ADBController"
-
-# Run script tests
-python3 scripts/adb_controller.py
+pytest                       # all unit + property + race (default)
+pytest -m unit               # unit only
+pytest -m property           # Hypothesis property tests
+pytest -m race               # threading / concurrency
+pytest -m integration        # real adb (skipped by default; opt-in)
+pytest --cov                 # coverage report
+pytest --cov --cov-fail-under=80   # gate at 80% (target — Phase 3 done)
+pytest -x -q                 # fail fast, quiet output
+pytest tests/unit/test_controller.py::TestPackages   # one class
 ```
 
-### Testing Checklist
+## Review process
 
-- [ ] Basic connection works
-- [ ] Commands execute correctly
-- [ ] Error handling works
-- [ ] Documentation examples work
-- [ ] Edge cases handled
+Reviewers look for, in order:
 
-### Device Testing
+1. **Doctrine compliance.** Especially Laws 1, 6, 7, 8.
+2. **Test coverage.** Every public method has at least one test.
+3. **Type safety.** `mypy --strict` must pass.
+4. **Style.** `ruff check .` clean.
+5. **Documentation.** Public API has docstrings; CHANGELOG updated.
+6. **Architectural fit.** No new circular deps; layering rules
+   respected.
 
-Test on multiple:
-- Android versions (10, 11, 12, 13, 14)
-- Manufacturers (Samsung, Pixel, Xiaomi, etc.)
-- Connection types (USB, wireless)
+A PR that fails (1) is rejected; (2)–(6) are negotiable with
+reviewer sign-off.
 
----
+## Releasing
 
-## Review Process
+Releases are cut by maintainers from `main` after a green CI matrix.
+Versioning follows [SemVer](https://semver.org/). Releases are tagged
+and published via GitHub Releases (PyPI in Phase 7).
 
-### Review Checklist
+## DCO sign-off (forthcoming)
 
-#### Code Quality
-- [ ] Follows coding standards
-- [ ] No unnecessary complexity
-- [ ] Proper error handling
-- [ ] No hardcoded values
-- [ ] No security issues
+Phase 7 will introduce a Developer Certificate of Origin sign-off
+requirement on commits. After that lands, every commit needs:
 
-#### Documentation
-- [ ] Public functions documented
-- [ ] Examples provided
-- [ ] README updated if needed
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
 
-#### Testing
-- [ ] Changes tested
-- [ ] Edge cases considered
-- [ ] No regressions
-
-#### Compatibility
-- [ ] Works with multiple Android versions
-- [ ] Works with USB and wireless
-- [ ] No breaking changes
-
-### Review Timeline
-
-- Initial review: 1-3 days
-- Follow-up: 1-2 days after updates
-- Merge: After approval
-
----
-
-## Questions?
-
-- Open an issue for questions
-- Tag with "question" label
-- Check existing issues first
-
-Thank you for contributing!
+Run `git commit -s` to add this automatically. Pre-existing
+contributions are grandfathered.

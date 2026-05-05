@@ -1,6 +1,18 @@
 # ADB Use Cases
 
-Practical use cases and workflows for ADB Android Control.
+> *Practical recipes for `adb-android-control`. Every code block in this
+> document is verified against the version listed below.*
+
+**Verification:**
+
+| Version | Last verified | Verifier |
+|---|---|---|
+| `1.1.0-rc1` | 2026-05-05 | doctrine review (Phase 4) |
+
+**Note:** raw `adb` examples below work against any `adb` version
+≥ 1.0.41. For the Python / `adb-control` equivalents of these
+snippets, see [`docs/TUTORIALS.md`](TUTORIALS.md) and
+[`adb_android_control/automation.py`](../adb_android_control/automation.py).
 
 ## Table of Contents
 
