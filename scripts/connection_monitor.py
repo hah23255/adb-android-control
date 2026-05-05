@@ -32,19 +32,19 @@ warnings.warn(
 def status(monitor: ConnectionMonitor) -> None:
     """Print current connection-monitor status."""
     state = monitor.get_current_state()
-    print("=" * 50)  # noqa: T201
-    print("Connection Monitor Status")  # noqa: T201
-    print("=" * 50)  # noqa: T201
-    print(f"  ADB Connected: {state.connected}")  # noqa: T201
+    print("=" * 50)
+    print("Connection Monitor Status")
+    print("=" * 50)
+    print(f"  ADB Connected: {state.connected}")
     if state.connected:
-        print(f"  Address:       {state.ip}:{state.port}")  # noqa: T201
-    print(f"  WiFi SSID:     {state.ssid}")  # noqa: T201
-    print(f"  Signal:        {state.rssi_dbm} dBm")  # noqa: T201
-    print(f"  Frequency:     {state.frequency_mhz} MHz")  # noqa: T201
-    print()  # noqa: T201
+        print(f"  Address:       {state.ip}:{state.port}")
+    print(f"  WiFi SSID:     {state.ssid}")
+    print(f"  Signal:        {state.rssi_dbm} dBm")
+    print(f"  Frequency:     {state.frequency_mhz} MHz")
+    print()
     if monitor.last_state is not None:
-        print(f"  Last Check:    {monitor.last_state.timestamp}")  # noqa: T201
-        print(f"  Last Port:     {monitor.last_state.port}")  # noqa: T201
+        print(f"  Last Check:    {monitor.last_state.timestamp}")
+        print(f"  Last Port:     {monitor.last_state.port}")
 
 
 def main() -> None:
@@ -58,9 +58,9 @@ def main() -> None:
             changes = monitor.check()
             if changes:
                 for c in changes:
-                    print(f"{c.kind.value}: {c.detail}")  # noqa: T201
+                    print(f"{c.kind.value}: {c.detail}")
             else:
-                print("No changes")  # noqa: T201
+                print("No changes")
         elif cmd == "run":
             interval = int(sys.argv[2]) if len(sys.argv) > 2 else 10
             monitor.run(interval_s=interval)
@@ -68,9 +68,9 @@ def main() -> None:
         status(monitor)
         changes = monitor.check()
         if changes:
-            print("Changes detected:")  # noqa: T201
+            print("Changes detected:")
             for c in changes:
-                print(f"  {c.kind.value}: {c.detail}")  # noqa: T201
+                print(f"  {c.kind.value}: {c.detail}")
 
 
 __all__ = [

@@ -27,11 +27,11 @@ def main() -> None:
     fd = int(os.environ.get("TERMUX_USB_FD", sys.argv[1] if len(sys.argv) > 1 else 0))
     info = identify_via_fd(fd)
     if info is None:
-        print("Could not read USB descriptor.")  # noqa: T201
+        print("Could not read USB descriptor.")
         return
-    print(f"Vendor ID:  0x{info.vid:04x}")  # noqa: T201
-    print(f"Product ID: 0x{info.pid:04x}")  # noqa: T201
-    print(f"Device:     {info.device_name}")  # noqa: T201
+    print(f"Vendor ID:  0x{info.vid:04x}")
+    print(f"Product ID: 0x{info.pid:04x}")
+    print(f"Device:     {info.device_name}")
 
 
 __all__ = ["main"]

@@ -32,11 +32,11 @@ def main() -> None:
     fd = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     info = identify_via_ioctl(fd)
     if info is None:
-        print("Could not identify device (ioctl failed).")  # noqa: T201
+        print("Could not identify device (ioctl failed).")
         return
-    print(f"VID:PID = {info.vid_pid}")  # noqa: T201
-    print(f"Vendor  = {info.vendor_name}")  # noqa: T201
-    print(f"Device  = {info.device_name}")  # noqa: T201
+    print(f"VID:PID = {info.vid_pid}")
+    print(f"Vendor  = {info.vendor_name}")
+    print(f"Device  = {info.device_name}")
 
 
 __all__ = [

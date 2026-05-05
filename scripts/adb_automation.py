@@ -29,10 +29,10 @@ warnings.warn(
 
 def main() -> None:
     """Demo entrypoint — prints a device health check as JSON."""
-    print("=== ADB Automation Demo ===\n")  # noqa: T201
+    print("=== ADB Automation Demo ===\n")
     mgr = DeviceManager()
-    print(json.dumps(mgr.health_check(), indent=2))  # noqa: T201
-    print("\n=== Demo Complete ===")  # noqa: T201
+    print(json.dumps(mgr.health_check(), indent=2))
+    print("\n=== Demo Complete ===")
 
 
 __all__ = [

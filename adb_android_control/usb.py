@@ -135,7 +135,7 @@ _USBDEVFS_CONTROL = 0xC0185500
 class _CtrlTransfer(ctypes.Structure):
     """Mirrors `struct usbdevfs_ctrltransfer` from <linux/usb/usbdevice_fs.h>."""
 
-    _fields_ = (  # noqa: RUF012
+    _fields_ = (
         ("bRequestType", ctypes.c_uint8),
         ("bRequest", ctypes.c_uint8),
         ("wValue", ctypes.c_uint16),

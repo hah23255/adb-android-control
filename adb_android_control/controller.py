@@ -106,8 +106,14 @@ class ADBController:
     availability is verified eagerly during construction.
     """
 
+    # Class-level annotation so MagicMock(spec_set=ADBController) sees
+    # this attribute (Doctrine Pattern: Poison-Pill Mock — strict mocks
+    # only allow attributes that introspect via dir(cls); instance-only
+    # attrs set in __init__ are invisible at the class level).
+    device_serial: str | None
+
     def __init__(self, device_serial: str | None = None) -> None:
-        self.device_serial: str | None = device_serial
+        self.device_serial = device_serial
         self._verify_adb()
 
     # ------------------------------------------------------------------ core
@@ -495,7 +501,7 @@ class ADBController:
     # ---------------------------------------------------------- system info
 
     def get_battery_level(self) -> int:
-        """Return battery level (0–100), or 0 if unparseable."""
+        """Return battery level (0-100), or 0 if unparseable."""
         output = self._shell("dumpsys battery | grep level")
         match = _BATTERY_LEVEL_RE.search(output)
         if match is None:

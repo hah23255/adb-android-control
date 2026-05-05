@@ -43,114 +43,114 @@ _HR = "=" * 60
 def print_wifi_status(scanner: RadioScanner | None = None) -> None:
     """Print current Wi-Fi connection info."""
     scanner = scanner or RadioScanner()
-    print(_HR)  # noqa: T201
-    print("📶 WiFi Status")  # noqa: T201
-    print(_HR)  # noqa: T201
+    print(_HR)
+    print("📶 WiFi Status")
+    print(_HR)
 
     adb_wifi = scanner.get_wifi()
     termux_wifi = scanner.get_wifi_via_termux() if adb_wifi is None else None
 
     if adb_wifi is not None:
-        print(f"  SSID:        {adb_wifi.ssid}")  # noqa: T201
-        print(f"  BSSID:       {adb_wifi.bssid}")  # noqa: T201
-        print(  # noqa: T201
+        print(f"  SSID:        {adb_wifi.ssid}")
+        print(f"  BSSID:       {adb_wifi.bssid}")
+        print(
             f"  Signal:      {adb_wifi.rssi_dbm} dBm "
             f"({rssi_to_quality(adb_wifi.rssi_dbm)})"
         )
-        print(  # noqa: T201
+        print(
             f"  Frequency:   {adb_wifi.frequency_mhz} MHz "
             f"(Channel {adb_wifi.channel})"
         )
-        print(f"  Band:        {adb_wifi.band}")  # noqa: T201
-        print(f"  Standard:    802.{adb_wifi.standard}")  # noqa: T201
-        print(f"  Link Speed:  {adb_wifi.link_speed_mbps} Mbps")  # noqa: T201
-        print(f"  TX Speed:    {adb_wifi.tx_speed_mbps} Mbps")  # noqa: T201
-        print(f"  RX Speed:    {adb_wifi.rx_speed_mbps} Mbps")  # noqa: T201
+        print(f"  Band:        {adb_wifi.band}")
+        print(f"  Standard:    802.{adb_wifi.standard}")
+        print(f"  Link Speed:  {adb_wifi.link_speed_mbps} Mbps")
+        print(f"  TX Speed:    {adb_wifi.tx_speed_mbps} Mbps")
+        print(f"  RX Speed:    {adb_wifi.rx_speed_mbps} Mbps")
     elif termux_wifi is not None:
         rssi = termux_wifi.get("rssi", 0)
         freq = termux_wifi.get("frequency_mhz", 0)
-        print(f"  SSID:        {termux_wifi.get('ssid', 'Unknown')}")  # noqa: T201
-        print(f"  BSSID:       {termux_wifi.get('bssid', 'Unknown')}")  # noqa: T201
-        print(f"  Signal:      {rssi} dBm ({rssi_to_quality(rssi)})")  # noqa: T201
-        print(  # noqa: T201
+        print(f"  SSID:        {termux_wifi.get('ssid', 'Unknown')}")
+        print(f"  BSSID:       {termux_wifi.get('bssid', 'Unknown')}")
+        print(f"  Signal:      {rssi} dBm ({rssi_to_quality(rssi)})")
+        print(
             f"  Frequency:   {freq} MHz (Channel {freq_to_channel(freq)})"
         )
-        print(f"  Band:        {freq_to_band(freq)}")  # noqa: T201
-        print(  # noqa: T201
+        print(f"  Band:        {freq_to_band(freq)}")
+        print(
             f"  Link Speed:  {termux_wifi.get('link_speed_mbps', 0)} Mbps"
         )
-        print(f"  IP:          {termux_wifi.get('ip', 'Unknown')}")  # noqa: T201
+        print(f"  IP:          {termux_wifi.get('ip', 'Unknown')}")
     else:
-        print("  WiFi info not available")  # noqa: T201
+        print("  WiFi info not available")
 
     stats = scanner.get_link_stats()
     if stats:
-        print(  # noqa: T201
+        print(
             f"\n  TX Stats:    Good: {stats.get('tx_good', 0)}, "
             f"Retry: {stats.get('tx_retry', 0)}, Bad: {stats.get('tx_bad', 0)}"
         )
-        print(f"  RX Stats:    Good: {stats.get('rx_good', 0)}")  # noqa: T201
-    print()  # noqa: T201
+        print(f"  RX Stats:    Good: {stats.get('rx_good', 0)}")
+    print()
 
 
 def print_wifi_scan(scanner: RadioScanner | None = None) -> None:
     """Print nearby Wi-Fi networks."""
     scanner = scanner or RadioScanner()
-    print(_HR)  # noqa: T201
-    print("📡 Nearby WiFi Networks")  # noqa: T201
-    print(_HR)  # noqa: T201
+    print(_HR)
+    print("📡 Nearby WiFi Networks")
+    print(_HR)
 
     networks = scanner.scan_wifi()
     if networks:
-        print(  # noqa: T201
+        print(
             f"{'SSID':<25} {'RSSI':>6} {'Ch':>4} {'Band':<7} {'Security':<15}"
         )
-        print("-" * 60)  # noqa: T201
+        print("-" * 60)
         for net in networks[:15]:
             ssid = net["ssid"][:24] if net["ssid"] else "(hidden)"
-            print(  # noqa: T201
+            print(
                 f"{ssid:<25} {net['rssi_dbm']:>4}dB {net['channel']:>4} "
                 f"{net['band']:<7} {net['security'][:14]:<15}"
             )
     else:
-        print("  Scan not available (may need location permission)")  # noqa: T201
-    print()  # noqa: T201
+        print("  Scan not available (may need location permission)")
+    print()
 
 
 def print_bluetooth_status(scanner: RadioScanner | None = None) -> None:
     """Print Bluetooth adapter state."""
     scanner = scanner or RadioScanner()
-    print(_HR)  # noqa: T201
-    print("🔵 Bluetooth Status")  # noqa: T201
-    print(_HR)  # noqa: T201
+    print(_HR)
+    print("🔵 Bluetooth Status")
+    print(_HR)
 
     bt = scanner.get_bluetooth()
     if bt is not None:
-        print(f"  State:       {bt.state}")  # noqa: T201
-        print(f"  Enabled:     {bt.enabled}")  # noqa: T201
-        print(f"  Name:        {bt.name}")  # noqa: T201
-        print(f"  Address:     {bt.address}")  # noqa: T201
+        print(f"  State:       {bt.state}")
+        print(f"  Enabled:     {bt.enabled}")
+        print(f"  Name:        {bt.name}")
+        print(f"  Address:     {bt.address}")
         devices = scanner.get_bluetooth_devices()
         if devices:
-            print("\n  Connected Devices:")  # noqa: T201
+            print("\n  Connected Devices:")
             for dev in devices:
-                print(f"    - {dev['address']} ({dev['name']})")  # noqa: T201
+                print(f"    - {dev['address']} ({dev['name']})")
     else:
-        print("  Bluetooth info not available")  # noqa: T201
-    print()  # noqa: T201
+        print("  Bluetooth info not available")
+    print()
 
 
 def print_radio_capabilities(scanner: RadioScanner | None = None) -> None:
     """Print device radio capabilities (features, MIMO, channel lists)."""
     scanner = scanner or RadioScanner()
-    print(_HR)  # noqa: T201
-    print("📻 Radio Capabilities")  # noqa: T201
-    print(_HR)  # noqa: T201
+    print(_HR)
+    print("📻 Radio Capabilities")
+    print(_HR)
 
     caps = scanner.get_capabilities()
     features = caps.get("features", [])
     if features:
-        print(f"  WiFi Features: {len(features)} supported")  # noqa: T201
+        print(f"  WiFi Features: {len(features)} supported")
         key_features = [
             "P2P",
             "TDLS",
@@ -160,20 +160,20 @@ def print_radio_capabilities(scanner: RadioScanner | None = None) -> None:
         ]
         for f in key_features:
             status = "✓" if f in features else "✗"
-            print(f"    {status} {f.replace('_', ' ').title()}")  # noqa: T201
+            print(f"    {status} {f.replace('_', ' ').title()}")
     if caps.get("mimo_likely"):
-        print("\n  MIMO:        Supported (Multi-stream capable)")  # noqa: T201
+        print("\n  MIMO:        Supported (Multi-stream capable)")
     if caps.get("channels_24ghz"):
-        print(f"  2.4GHz Ch:   {caps['channels_24ghz']}")  # noqa: T201
+        print(f"  2.4GHz Ch:   {caps['channels_24ghz']}")
     if caps.get("channels_5ghz"):
-        print(f"  5GHz Ch:     {caps['channels_5ghz']}")  # noqa: T201
+        print(f"  5GHz Ch:     {caps['channels_5ghz']}")
     if caps.get("channels_6ghz"):
         chans = caps["channels_6ghz"]
         if len(chans) > 50:
-            print(f"  6GHz Ch:     {chans[:50]}...")  # noqa: T201
+            print(f"  6GHz Ch:     {chans[:50]}...")
         else:
-            print(f"  6GHz Ch:     {chans}")  # noqa: T201
-    print()  # noqa: T201
+            print(f"  6GHz Ch:     {chans}")
+    print()
 
 
 def main() -> None:

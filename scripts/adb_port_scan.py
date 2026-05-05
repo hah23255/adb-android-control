@@ -35,20 +35,20 @@ def main() -> None:
     start = int(sys.argv[2]) if len(sys.argv) > 2 else 30000
     end = int(sys.argv[3]) if len(sys.argv) > 3 else 45000
 
-    print(f"Scanning {ip} ports {start}-{end}...")  # noqa: T201
+    print(f"Scanning {ip} ports {start}-{end}...")
     scanner = PortScanner()
     port = scanner.find_adb_port(ip, start=start, end=end)
 
     if port:
-        print(f"\n✓ ADB found at {ip}:{port}")  # noqa: T201
+        print(f"\n✓ ADB found at {ip}:{port}")
         update_devices_file(
             Path.home() / ".adb_devices", name="ZFOLD7", ip=ip, port=port
         )
         save_last_port(Path.home() / ".adb_last_port", port)
-        print(f"Config updated. Use: adb -s {ip}:{port} shell")  # noqa: T201
+        print(f"Config updated. Use: adb -s {ip}:{port} shell")
     else:
-        print("\n✗ No ADB port found.")  # noqa: T201
-        print("Ensure Wireless Debugging is enabled on device.")  # noqa: T201
+        print("\n✗ No ADB port found.")
+        print("Ensure Wireless Debugging is enabled on device.")
 
 
 __all__ = [
