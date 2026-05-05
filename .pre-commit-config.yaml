@@ -1,0 +1,80 @@
+# Master Tester Doctrine — pre-commit gate
+# Law 1 enforcement begins here: tests can never be modified to make a hook pass.
+# Every hook below fails loud; agents and humans fix the underlying cause.
+
+repos:
+  # ── Generic hygiene ──────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # ── Secrets / PII guard (internal lesson (PII pre-commit gate) — never again) ───────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        name: gitleaks (PII / secret scan — re-prevents v1.0.0 incident)
+
+  # ── Python lint + format (ruff) ─────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+      - id: ruff-format
+
+  # ── Type checking (mypy --strict) ───────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pytest>=8.3
+          - hypothesis>=6.115
+        args: ["--strict", "--show-error-codes"]
+        files: ^adb_android_control/
+
+  # ── Tests (pytest -x on staged) ─────────────────────────────────────────
+  # Heavy hook — runs tests on commit. Skip with --no-verify ONLY if you
+  # have an explicit reason and the test file is already fixed in a prior
+  # commit. Doctrine Law 1 forbids editing tests to make this hook pass.
+  - repo: local
+    hooks:
+      - id: pytest-fast
+        name: pytest (unit tests, fail-fast)
+        entry: pytest -x -q -m "unit and not slow"
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]   # Only on push, not every commit, to keep dev loop fast
+
+  # ── Markdown / docs ──────────────────────────────────────────────────────
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: ["--disable", "MD013", "MD033", "MD041", "--"]
+        files: \.md$
+
+# ── Configuration ──────────────────────────────────────────────────────────
+default_language_version:
+  python: python3.10
+
+# Files that are reference-only (canonical doctrine bundle) skip linting —
+# we don't reformat upstream content.
+exclude: |
+  (?x)^(
+    docs/master-tester-doctrine/.*|
+    \.git/.*
+  )$

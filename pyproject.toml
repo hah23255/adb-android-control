@@ -1,0 +1,193 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adb-android-control"
+version = "1.1.0-rc1"
+description = "Comprehensive Android device control via ADB for Claude Code"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "hah23255" }]
+keywords = [
+    "adb", "android", "claude-code", "claude-skill", "anthropic",
+    "android-debug-bridge", "device-control", "automation", "termux",
+    "wireless-debugging", "mobile-testing",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Hardware",
+]
+dependencies = []  # Pure stdlib for runtime
+
+[project.urls]
+Homepage = "https://github.com/hah23255/adb-android-control"
+Repository = "https://github.com/hah23255/adb-android-control"
+Issues = "https://github.com/hah23255/adb-android-control/issues"
+Changelog = "https://github.com/hah23255/adb-android-control/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    # Test runner
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "pytest-mock>=3.14",
+    "pytest-subprocess>=1.5",
+    "pytest-xdist>=3.6",        # Parallel test execution (Law 5: isolation)
+    "pytest-randomly>=3.15",    # Order-randomization (Law 5)
+    # Property-based fuzzing (doctrine Patterns)
+    "hypothesis>=6.115",
+    # Determinism (Law 8)
+    "freezegun>=1.5",
+    # Linting / type-checking
+    "ruff>=0.7",
+    "mypy>=1.13",
+    # Architecture boundaries (doctrine Patterns)
+    "import-linter>=2.1",
+    "vulture>=2.13",            # Dead-code detection
+    # Pre-commit framework
+    "pre-commit>=4.0",
+    # Documentation generator
+    "pdoc>=15.0",
+]
+
+[project.scripts]
+adb-control = "adb_android_control.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["adb_android_control*"]
+exclude = ["tests*", "docs*"]
+
+# ---------------------------------------------------------------------------
+# Pytest configuration
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Doctrine Law 5: isolation — fail loudly on shared state
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--showlocals",
+    "--tb=short",
+    "--import-mode=importlib",
+]
+markers = [
+    "unit: pure-Python unit tests (default; no subprocess, no network, no device)",
+    "integration: requires real adb binary on PATH (skipped by default)",
+    "device: requires a real connected Android device (skipped by default)",
+    "property: hypothesis property-based tests",
+    "race: race-condition / concurrency tests",
+    "slow: tests >1s (exclude with -m 'not slow')",
+    "quarantine: known-flaky, opened-issue tracked",
+]
+filterwarnings = [
+    "error",                       # Treat all warnings as errors (Law 8)
+    "ignore::DeprecationWarning:hypothesis.*",
+]
+
+# ---------------------------------------------------------------------------
+# Coverage configuration
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = ["adb_android_control"]
+omit = [
+    "tests/*",
+    "*/conftest.py",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+]
+# Phase 1 starts at 30%, Phase 3 raises to 80% per the plan
+fail_under = 30
+show_missing = true
+skip_covered = false
+
+# ---------------------------------------------------------------------------
+# Ruff configuration (lint + format)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",       # pycodestyle
+    "F",            # pyflakes
+    "I",            # isort
+    "N",            # pep8-naming
+    "B",            # flake8-bugbear
+    "C4",           # flake8-comprehensions
+    "SIM",          # flake8-simplify
+    "ANN",          # flake8-annotations (Law 7)
+    "S",            # flake8-bandit (security)
+    "PTH",          # flake8-use-pathlib
+    "RET",          # flake8-return
+    "ARG",          # flake8-unused-arguments
+    "UP",           # pyupgrade
+    "TCH",          # flake8-type-checking
+    "RUF",          # Ruff-specific
+]
+ignore = [
+    "ANN101",  # missing-type-self (Python convention)
+    "ANN102",  # missing-type-cls
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are allowed to use asserts and have less strict typing
+"tests/**/*.py" = ["S101", "ANN", "ARG"]
+# But Law 7: never `cast(Any)` in tests
+# (enforced separately via mypy --strict)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Mypy configuration (strict per Law 7)
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_configs = true
+warn_unreachable = true
+disallow_any_unimported = true
+disallow_any_explicit = true       # Bans `Any` annotations (Law 7)
+no_implicit_reexport = true
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_any_explicit = false      # Tests may need Any for fixture flexibility
+
+# ---------------------------------------------------------------------------
+# Vulture (dead-code detection)
+# ---------------------------------------------------------------------------
+[tool.vulture]
+min_confidence = 80
+paths = ["adb_android_control"]
+exclude = ["tests/"]
