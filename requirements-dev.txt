@@ -1,0 +1,37 @@
+# Development dependencies for adb-android-control
+# Mirrors `pyproject.toml [project.optional-dependencies] dev` for tools
+# (and CI matrix entries) that don't read pyproject.toml.
+#
+# Install: pip install -r requirements-dev.txt
+
+# ── Test runner & plugins ─────────────────────────────────────────────────
+pytest>=8.3
+pytest-cov>=5.0
+pytest-mock>=3.14
+pytest-subprocess>=1.5
+pytest-xdist>=3.6        # Parallel test execution (Doctrine Law 5)
+pytest-randomly>=3.15    # Order-randomization (Doctrine Law 5)
+
+# ── Property-based fuzzing (Doctrine Patterns) ────────────────────────────
+hypothesis>=6.115
+
+# ── Determinism (Doctrine Law 8) ──────────────────────────────────────────
+freezegun>=1.5
+
+# ── Linting & type-checking ───────────────────────────────────────────────
+ruff>=0.7
+mypy>=1.13
+
+# ── Architecture & dead-code (Doctrine Patterns) ─────────────────────────
+import-linter>=2.1
+vulture>=2.13
+
+# ── Pre-commit framework ──────────────────────────────────────────────────
+pre-commit>=4.0
+
+# ── Documentation generator ───────────────────────────────────────────────
+pdoc>=15.0
+
+# ── Build / packaging ─────────────────────────────────────────────────────
+build>=1.2
+twine>=5.1

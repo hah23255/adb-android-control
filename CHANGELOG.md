@@ -1,11 +1,118 @@
 # Changelog
 
-All notable changes to adb-android-control will be documented here.
+All notable changes to `adb-android-control` are documented here.
 
-## [1.0.0] - 2025-12-25
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased] — Phase 2 finishing pass
 
 ### Added
+- `adb_android_control/cli.py` — unified `adb-control` console-script entrypoint
+  with subcommands: `devices`, `info`, `shot`, `monitor`, `workflow`, `health`,
+  `radio`, `connection`, `scan-port`, plus `--version` and `-v/-vv` verbosity.
+  Wired in `pyproject.toml [project.scripts]`.
+- `adb_android_control/py.typed` — PEP 561 marker so downstream consumers
+  pick up the package's type hints.
+- `requirements-dev.txt` — mirror of `pyproject.toml [project.optional-dependencies] dev`
+  for CI matrices and IDEs that don't read pyproject.
 
+## [1.1.0-rc1] — 2026-05-05 (private)
+
+### Added
+- **Master Tester Doctrine** (HH directive 2026-03-05) installed as the
+  canonical testing methodology. Bundle at `docs/master-tester-doctrine/`
+  (27 files); project entrypoint at `docs/TESTING_DOCTRINE.md`.
+- **Python package layout**: all runtime code now lives in
+  `adb_android_control/` as a proper installable package with strict
+  type hints throughout.
+- **Typed exception hierarchy** in `controller.py`:
+  - `ADBError` (base)
+  - `ADBNotFoundError` — adb binary missing
+  - `DeviceOfflineError` — device offline / unauthorized
+  - `ADBTimeoutError` — command timeout
+  - `ADBPermissionError` — permission denied
+- **Public `ADBController.shell()`** — replaces inter-module reliance on
+  the private `_shell` (Doctrine Law 2).
+- **205 unit tests** across 7 test files using the Poison-Pill subprocess
+  mock, `freezegun`, and `spec_set` MagicMock injection (see commits
+  `8880d15`, `de51abc`, `facc2e1`, `b4da9c3`, `fb6de6c`, `4156899`).
+- **Frozen value objects** throughout: `DeviceInfo`, `LogEntry`,
+  `PerformanceSnapshot`, `CrashEvent`, `AutomationStep`, `StepOutcome`,
+  `AutomationResult`, `InstallAndLaunchResult`, `WiFiInfo`, `BluetoothInfo`,
+  `ConnectionState`, `Change`, `USBDeviceInfo`.
+- **Pure-function extraction** for parsers and converters — `freq_to_channel`,
+  `freq_to_band`, `rssi_to_quality`, `parse_log_line`, `parse_wifi_info`,
+  `parse_scan_results`, `parse_bluetooth_info`, `parse_bluetooth_devices`,
+  `parse_link_stats`, `parse_adb_devices`, `detect_changes`,
+  `parse_device_descriptor`, `rewrite_devices_config`.
+- **Dependency injection** across all classes for test substitutability:
+  `adb=ADBController`, `notifier`, `adb_status_fn`, `wifi_info_fn`,
+  `now_fn`, `check_port_fn`, `adb_connect_fn`, etc.
+- **Python toolchain**: `pyproject.toml` with strict pytest, ruff, mypy,
+  hypothesis, freezegun, import-linter, vulture, pdoc; pre-commit hooks
+  with gitleaks (re-prevents the v1.0.0 PII incident class).
+- **`ChangeType` enum** in `connection_monitor.py` — typed transitions
+  replace the v1.0.0 string-tuple events.
+- **`StepOutcome` typed result** in `automation.py` — replaces the
+  v1.0.0 `bool | str` union.
+
+### Changed
+- `monitor.py` `parse_log_line` and `is_crash_entry` are now `@staticmethod`
+  pure predicates — directly testable.
+- `automation.py` step dispatch is now a dict-of-handlers instead of a
+  long `if/elif` chain.
+- `radio.py` field names now carry units: `rssi_dbm`, `frequency_mhz`,
+  `link_speed_mbps`, etc.
+- `connection_monitor.py` paths, notifier, and probes are all injectable.
+- All `subprocess.run` invocations use argv lists; `shell=True` removed
+  everywhere (security hardening).
+- timezone-aware UTC `datetime.now(tz=timezone.utc)` replaces naive
+  timestamps (Doctrine Law 8 — determinism).
+- `scripts/*.py` reduced to deprecation shims (will be removed in v2.0).
+
+### Deprecated
+- `from scripts.adb_controller import ...` — use
+  `from adb_android_control import ...`. Shim emits `DeprecationWarning`.
+- Same for `scripts.adb_monitor`, `scripts.adb_automation`,
+  `scripts.radio_scan`, `scripts.connection_monitor`,
+  `scripts.adb_port_scan`, `scripts.usb_identify`, `scripts.usb_info`.
+
+### Removed
+- Module-level `logging.basicConfig(...)` from library code (was a
+  side-effect-on-import hazard).
+- Bare `except:` everywhere — replaced with specific exceptions or
+  documented Lesson-41 graceful-degradation `except Exception:` with
+  inline rationale.
+
+### internal lesson (PII pre-commit gate) logged
+- **2026-05-05** — `device.env` PII leak (96 file/commit hits across
+  v1.0.0 history). Mitigation: `git filter-repo` purge + tightened
+  `.gitignore` patterns + `gitleaks` pre-commit hook. Recorded in
+  `docs/TESTING_DOCTRINE.md` under "Lessons Extracted from Real Failures".
+
+## [1.0.1] — 2026-05-05
+
+### Security
+- **CRITICAL**: Purged personally-identifying device data from full repo
+  history (96 file/commit hits) via `git filter-repo`. Categories
+  redacted: device serial, Android ID, WiFi BSSID + SSID, Bluetooth name,
+  internal IPs across two networks, full device fingerprint.
+- Added `device.env.example` template with explicit "never commit"
+  warnings on geolocation-sensitive fields.
+- Hardened `.gitignore` with `device.env`, `*.env` (with `!*.env.example`
+  exception), `LOGBOOK.md`, `private/`, `personal/` patterns.
+
+### Note
+- This release **rewrites repo history**. All commit SHAs prior to
+  v1.0.1 are gone. Forks and clones must rebase or re-clone.
+- Force-push does not retroactively redact GitHub's archival caches or
+  third-party mirrors — leaked data should be considered permanently
+  public regardless of this release.
+
+## [1.0.0] — 2025-12-25
+
+### Added
 **Core Functionality:**
 - Complete ADB command reference in SKILL.md
 - App management (install, uninstall, list, clear data, force stop)
@@ -18,9 +125,9 @@ All notable changes to adb-android-control will be documented here.
 - System settings manipulation
 
 **Python Scripts:**
-- `adb_controller.py`: Main controller with clean API (800+ lines)
-- `adb_automation.py`: Workflow automation and app testing (400+ lines)
-- `adb_monitor.py`: Real-time monitoring for logs, performance, crashes (500+ lines)
+- `adb_controller.py` — main controller (~450 LOC)
+- `adb_automation.py` — workflow automation and app testing (~425 LOC)
+- `adb_monitor.py` — real-time monitoring (~430 LOC)
 
 **Reference Documentation:**
 - Complete key event codes reference (100+ keycodes)
@@ -35,20 +142,22 @@ All notable changes to adb-android-control will be documented here.
 - CrashMonitor for crash detection
 
 ### Wireless ADB Support
-
 - Full wireless debugging support
 - Pairing and connection management
 - Auto-reconnect capabilities
 
-### Known Limitations
-
-- Some operations require root access
-- Screen recording limited to 180 seconds (Android limitation)
-- Input text cannot include certain special characters
+### Known Limitations (v1.0.0 — addressed in 1.1.0)
+- ~~No tests~~ → 205 unit tests in 1.1.0
+- ~~No type checking~~ → strict mypy in 1.1.0
+- ~~`shell=True` in some scripts~~ → argv-only in 1.1.0
+- ~~`bool | str` mixed return type in `_execute_step`~~ → typed
+  `StepOutcome` in 1.1.0
+- ~~`_shell` private-access in monitor / automation~~ → public
+  `shell()` in 1.1.0
 
 ### Planned for v2.0
-
 - UI element detection and interaction
 - OCR-based text recognition
 - Multi-device support
 - Workflow recording and playback
+- Removal of `scripts/*.py` shims (deprecated in 1.1.0)
