@@ -144,9 +144,7 @@ class ADBController:
             raise ADBTimeoutError("`adb version` timed out — adb-server may be wedged.") from exc
 
         if result.returncode != 0:
-            raise ADBError(
-                f"`adb version` exited {result.returncode}: {result.stderr.strip()}"
-            )
+            raise ADBError(f"`adb version` exited {result.returncode}: {result.stderr.strip()}")
 
     def _run(self, cmd: list[str], timeout: int = DEFAULT_TIMEOUT_S) -> str:
         """Run an ADB sub-command and return stdout.
@@ -180,9 +178,7 @@ class ADBController:
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise ADBTimeoutError(
-                f"Command timed out after {timeout}s: {' '.join(cmd)}"
-            ) from exc
+            raise ADBTimeoutError(f"Command timed out after {timeout}s: {' '.join(cmd)}") from exc
 
         if result.returncode != 0:
             stderr = result.stderr.strip()
@@ -283,11 +279,7 @@ class ADBController:
         if third_party_only:
             cmd += " -3"
         output = self._shell(cmd)
-        return [
-            line.removeprefix("package:")
-            for line in output.split("\n")
-            if line.strip()
-        ]
+        return [line.removeprefix("package:") for line in output.split("\n") if line.strip()]
 
     def install_apk(
         self,

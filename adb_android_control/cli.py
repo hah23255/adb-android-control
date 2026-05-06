@@ -111,6 +111,7 @@ def cmd_monitor(args: argparse.Namespace) -> int:
     elif args.mode == "events":
         EventMonitor(args.serial).start_event_capture()
     elif args.mode == "crash":
+
         def _on_crash(c: CrashEvent) -> None:
             print(f"!!! CRASH: [{c.tag}] {c.message}")
 
@@ -225,14 +226,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_mon = sub.add_parser("monitor", help="Real-time monitoring")
     p_mon.add_argument("mode", choices=["logcat", "perf", "events", "crash"])
     p_mon.add_argument(
-        "-l", "--level",
+        "-l",
+        "--level",
         default="V",
         choices=["V", "D", "I", "W", "E", "F"],
         help="Logcat level filter (logcat mode only)",
     )
-    p_mon.add_argument(
-        "-i", "--interval", type=float, default=5.0, help="Perf interval seconds"
-    )
+    p_mon.add_argument("-i", "--interval", type=float, default=5.0, help="Perf interval seconds")
     p_mon.set_defaults(func=cmd_monitor)
 
     p_wf = sub.add_parser("workflow", help="Run a JSON workflow")
@@ -242,9 +242,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("health", help="Device health check (JSON)").set_defaults(func=cmd_health)
 
     p_radio = sub.add_parser("radio", help="Radio scanner (wifi/bluetooth/caps)")
-    p_radio.add_argument(
-        "sections", nargs="*", help="One or more of: wifi scan bluetooth caps all"
-    )
+    p_radio.add_argument("sections", nargs="*", help="One or more of: wifi scan bluetooth caps all")
     p_radio.set_defaults(func=cmd_radio)
 
     p_conn = sub.add_parser("connection", help="Connection monitor")

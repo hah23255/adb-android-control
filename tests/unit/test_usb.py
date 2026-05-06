@@ -25,8 +25,8 @@ pytestmark = pytest.mark.unit
 def _make_descriptor(vid: int, pid: int) -> bytes:
     """Construct an 18-byte USB device descriptor with given VID/PID."""
     buf = bytearray(18)
-    buf[0] = 18           # bLength
-    buf[1] = 0x01         # bDescriptorType (DEVICE)
+    buf[0] = 18  # bLength
+    buf[1] = 0x01  # bDescriptorType (DEVICE)
     buf[8] = vid & 0xFF
     buf[9] = (vid >> 8) & 0xFF
     buf[10] = pid & 0xFF
@@ -209,9 +209,7 @@ class TestIdentifyViaFd:
             os.close(r)
             os.close(w)
 
-    def test_returns_none_on_oserror(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_none_on_oserror(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange — bad fd will OSError
         def _raise(*_a: object, **_k: object) -> bytes:
             raise OSError("bad fd")

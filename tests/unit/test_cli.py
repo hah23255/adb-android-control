@@ -28,9 +28,7 @@ class TestArgparseLayout:
         parser = build_parser()
 
         # Assert — drill into the subparsers action to enumerate
-        sub_actions = [
-            a for a in parser._actions if isinstance(a, argparse._SubParsersAction)  # noqa: SLF001
-        ]
+        sub_actions = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
         assert sub_actions, "Parser must have a subparsers action"
         choices = set(sub_actions[0].choices.keys())
         assert choices == {
@@ -45,9 +43,7 @@ class TestArgparseLayout:
             "scan-port",
         }
 
-    def test_version_flag_prints_package_version(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_version_flag_prints_package_version(self, capsys: pytest.CaptureFixture[str]) -> None:
         # Arrange + Act + Assert
         with pytest.raises(SystemExit) as excinfo:
             build_parser().parse_args(["--version"])
@@ -61,14 +57,14 @@ class TestArgparseLayout:
             (["devices"], "devices"),
             (["info"], "info"),
             (["shot"], "shot"),
-            (["shot", "/tmp/x.png"], "shot"),
+            (["shot", "/tmp/x.png"], "shot"),  # noqa: S108
             (["health"], "health"),
             (["radio", "wifi", "scan"], "radio"),
             (["scan-port", "10.0.0.1"], "scan-port"),
             (["scan-port", "10.0.0.1", "--start", "5550", "--end", "5560"], "scan-port"),
             (["monitor", "logcat"], "monitor"),
             (["monitor", "perf", "--interval", "2.5"], "monitor"),
-            (["workflow", "/tmp/wf.json"], "workflow"),
+            (["workflow", "/tmp/wf.json"], "workflow"),  # noqa: S108
             (["connection"], "connection"),
             (["connection", "check"], "connection"),
         ],
@@ -116,9 +112,7 @@ class TestArgparseLayout:
 
 
 class TestMainExitCodes:
-    def test_main_exits_with_subcommand_return_code(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_main_exits_with_subcommand_return_code(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange — install a fake subcommand handler
         from adb_android_control import cli
 
@@ -153,9 +147,7 @@ class TestMainExitCodes:
         captured = capsys.readouterr()
         assert "device offline" in captured.err
 
-    def test_main_exits_130_on_keyboard_interrupt(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_main_exits_130_on_keyboard_interrupt(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange — Ctrl-C semantics: exit 130 (128 + SIGINT)
         from adb_android_control import cli
 

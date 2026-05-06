@@ -53,14 +53,8 @@ def print_wifi_status(scanner: RadioScanner | None = None) -> None:
     if adb_wifi is not None:
         print(f"  SSID:        {adb_wifi.ssid}")
         print(f"  BSSID:       {adb_wifi.bssid}")
-        print(
-            f"  Signal:      {adb_wifi.rssi_dbm} dBm "
-            f"({rssi_to_quality(adb_wifi.rssi_dbm)})"
-        )
-        print(
-            f"  Frequency:   {adb_wifi.frequency_mhz} MHz "
-            f"(Channel {adb_wifi.channel})"
-        )
+        print(f"  Signal:      {adb_wifi.rssi_dbm} dBm ({rssi_to_quality(adb_wifi.rssi_dbm)})")
+        print(f"  Frequency:   {adb_wifi.frequency_mhz} MHz (Channel {adb_wifi.channel})")
         print(f"  Band:        {adb_wifi.band}")
         print(f"  Standard:    802.{adb_wifi.standard}")
         print(f"  Link Speed:  {adb_wifi.link_speed_mbps} Mbps")
@@ -72,13 +66,9 @@ def print_wifi_status(scanner: RadioScanner | None = None) -> None:
         print(f"  SSID:        {termux_wifi.get('ssid', 'Unknown')}")
         print(f"  BSSID:       {termux_wifi.get('bssid', 'Unknown')}")
         print(f"  Signal:      {rssi} dBm ({rssi_to_quality(rssi)})")
-        print(
-            f"  Frequency:   {freq} MHz (Channel {freq_to_channel(freq)})"
-        )
+        print(f"  Frequency:   {freq} MHz (Channel {freq_to_channel(freq)})")
         print(f"  Band:        {freq_to_band(freq)}")
-        print(
-            f"  Link Speed:  {termux_wifi.get('link_speed_mbps', 0)} Mbps"
-        )
+        print(f"  Link Speed:  {termux_wifi.get('link_speed_mbps', 0)} Mbps")
         print(f"  IP:          {termux_wifi.get('ip', 'Unknown')}")
     else:
         print("  WiFi info not available")
@@ -102,9 +92,7 @@ def print_wifi_scan(scanner: RadioScanner | None = None) -> None:
 
     networks = scanner.scan_wifi()
     if networks:
-        print(
-            f"{'SSID':<25} {'RSSI':>6} {'Ch':>4} {'Band':<7} {'Security':<15}"
-        )
+        print(f"{'SSID':<25} {'RSSI':>6} {'Ch':>4} {'Band':<7} {'Security':<15}")
         print("-" * 60)
         for net in networks[:15]:
             ssid = net["ssid"][:24] if net["ssid"] else "(hidden)"

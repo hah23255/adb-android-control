@@ -3,8 +3,9 @@
 Doctrine
 --------
 - Master Tester Doctrine § Advanced Patterns: "OOM on CI" warns about
-  signal/exit-code edge cases. internal lesson (adaptive fault tolerance) ("Adaptive Fault Tolerance")
-  demands graceful degradation on every transient failure path.
+  signal/exit-code edge cases. internal lesson (adaptive fault tolerance)
+  ("Adaptive Fault Tolerance") demands graceful degradation on every
+  transient failure path.
 - Each test injects a *specific failure mode* into the underlying I/O
   layer and asserts:
     1. The right typed exception is raised, OR
@@ -38,7 +39,7 @@ from __future__ import annotations
 import errno
 import socket
 import subprocess
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -52,7 +53,9 @@ from adb_android_control.controller import (
 )
 from adb_android_control.port_scan import check_port, try_adb_connect
 from adb_android_control.usb import identify_via_fd
-from tests.conftest import PoisonPillADB
+
+if TYPE_CHECKING:
+    from tests.conftest import PoisonPillADB
 
 pytestmark = pytest.mark.unit
 
@@ -80,15 +83,13 @@ class TestControllerExitCodeClassification:
         # Act + Assert — generic ADBError (NOT timeout-specific because
         # subprocess.run didn't raise TimeoutExpired; the wrapper did)
         with pytest.raises(ADBError) as excinfo:
-            ctrl._shell("ls")  # noqa: SLF001
+            ctrl._shell("ls")
         # Should NOT be misclassified as DeviceOfflineError or
         # ADBPermissionError (those require specific stderr markers)
         assert not isinstance(excinfo.value, DeviceOfflineError)
         assert not isinstance(excinfo.value, ADBPermissionError)
 
-    def test_exit_137_oom_killed_raises_generic_adb_error(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_exit_137_oom_killed_raises_generic_adb_error(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — exit 137 = 128 + SIGKILL (e.g. OOM killer)
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(
@@ -100,7 +101,7 @@ class TestControllerExitCodeClassification:
 
         # Act + Assert
         with pytest.raises(ADBError):
-            ctrl._shell("dumpsys")  # noqa: SLF001
+            ctrl._shell("dumpsys")
 
     def test_subprocess_timeout_expired_raises_adb_timeout_error(
         self, monkeypatch: pytest.MonkeyPatch, mock_adb: PoisonPillADB
@@ -117,7 +118,7 @@ class TestControllerExitCodeClassification:
 
         # Act + Assert
         with pytest.raises(ADBTimeoutError) as excinfo:
-            ctrl._shell("ls")  # noqa: SLF001
+            ctrl._shell("ls")
         assert "timed out" in str(excinfo.value).lower()
 
     def test_construction_with_filenotfounderror_raises_adb_not_found(
@@ -170,27 +171,19 @@ class TestControllerExitCodeClassification:
 
 
 class TestControllerOutputCorruption:
-    def test_unparseable_sdk_version_raises_adb_error(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_unparseable_sdk_version_raises_adb_error(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — every getprop returns OK except the SDK one
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(["adb", "shell", "getprop ro.product.model"], stdout="X")
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.build.version.release"], stdout="14"
-        )
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.build.version.sdk"], stdout="not-a-number"
-        )
+        mock_adb.register(["adb", "shell", "getprop ro.build.version.release"], stdout="14")
+        mock_adb.register(["adb", "shell", "getprop ro.build.version.sdk"], stdout="not-a-number")
         ctrl = ADBController()
 
         # Act + Assert
         with pytest.raises(ADBError, match="Unparseable SDK"):
             ctrl.get_device_info()
 
-    def test_garbled_screen_size_returns_zero_zero_not_crash(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_garbled_screen_size_returns_zero_zero_not_crash(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — `wm size` returns nonsense
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(["adb", "shell", "wm size"], stdout="???")
@@ -202,14 +195,10 @@ class TestControllerOutputCorruption:
         # Assert — degraded, not crashed (internal lesson (adaptive fault tolerance))
         assert size == (0, 0)
 
-    def test_empty_battery_output_returns_zero(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_empty_battery_output_returns_zero(self, mock_adb: PoisonPillADB) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
-        mock_adb.register(
-            ["adb", "shell", "dumpsys battery | grep level"], stdout=""
-        )
+        mock_adb.register(["adb", "shell", "dumpsys battery | grep level"], stdout="")
         ctrl = ADBController()
 
         # Act + Assert
@@ -303,9 +292,7 @@ class TestPortScannerOSErrors:
 
 
 class TestUSBFDFailures:
-    def test_identify_via_fd_returns_none_for_bad_fd(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_identify_via_fd_returns_none_for_bad_fd(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange — os.read on a bad fd raises OSError
         import os
 
@@ -345,9 +332,7 @@ class TestExceptionHierarchyContract:
         "exc_cls",
         [ADBNotFoundError, DeviceOfflineError, ADBTimeoutError, ADBPermissionError],
     )
-    def test_subclass_caught_by_base_handler(
-        self, exc_cls: type[Exception]
-    ) -> None:
+    def test_subclass_caught_by_base_handler(self, exc_cls: type[Exception]) -> None:
         # Arrange + Act
         try:
             raise exc_cls("test")

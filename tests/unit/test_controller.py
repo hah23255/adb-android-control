@@ -10,7 +10,7 @@ documents an observable contract. We never test private methods directly
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -24,7 +24,11 @@ from adb_android_control.controller import (
     DeviceOfflineError,
     DeviceState,
 )
-from tests.conftest import PoisonPillADB
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from tests.conftest import PoisonPillADB
 
 pytestmark = pytest.mark.unit
 
@@ -86,8 +90,11 @@ class TestErrorClassification:
     ) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
+        # NB: ADBController._shell forwards ``cmd`` as a single argv element
+        # to ``_run(["shell", cmd])`` — see controller.py:200. The mock argv
+        # therefore matches that joined form, not a split form.
         mock_adb.register(
-            ["adb", "shell", "getprop", "ro.product.model"],
+            ["adb", "shell", "getprop ro.product.model"],
             stderr="error: device offline",
             returncode=1,
         )
@@ -103,7 +110,7 @@ class TestErrorClassification:
         # Arrange — unauthorized devices share the offline-class semantics
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(
-            ["adb", "shell", "wm", "size"],
+            ["adb", "shell", "wm size"],
             stderr="error: device unauthorized.\nThis adb server's $ADB_VENDOR_KEYS is not set",
             returncode=1,
         )
@@ -113,9 +120,7 @@ class TestErrorClassification:
         with pytest.raises(DeviceOfflineError):
             ctrl.get_screen_size()
 
-    def test_permission_denied_raises_adb_permission_error(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_permission_denied_raises_adb_permission_error(self, mock_adb: PoisonPillADB) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(
@@ -127,7 +132,7 @@ class TestErrorClassification:
 
         # Act + Assert
         with pytest.raises(ADBPermissionError):
-            ctrl._shell("cat /data/secret")  # noqa: SLF001 — testing classification
+            ctrl._shell("cat /data/secret")
 
     def test_typed_errors_inherit_from_adbe_rror(self) -> None:
         # Arrange + Act + Assert — base-class catch-all must work
@@ -200,9 +205,7 @@ class TestDevicesListing:
 
 
 class TestConnectDisconnect:
-    def test_connect_returns_true_when_adb_reports_connected(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_connect_returns_true_when_adb_reports_connected(self, mock_adb: PoisonPillADB) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(
@@ -264,19 +267,11 @@ class TestDeviceInfo:
         battery: str = "level: 87",
     ) -> None:
         mock_adb.register(["adb", "version"], stdout="v1\n")
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.product.model"], stdout=model
-        )
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.build.version.release"], stdout=version
-        )
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.build.version.sdk"], stdout=sdk
-        )
+        mock_adb.register(["adb", "shell", "getprop ro.product.model"], stdout=model)
+        mock_adb.register(["adb", "shell", "getprop ro.build.version.release"], stdout=version)
+        mock_adb.register(["adb", "shell", "getprop ro.build.version.sdk"], stdout=sdk)
         mock_adb.register(["adb", "shell", "wm size"], stdout=screen)
-        mock_adb.register(
-            ["adb", "shell", "dumpsys battery | grep level"], stdout=battery
-        )
+        mock_adb.register(["adb", "shell", "dumpsys battery | grep level"], stdout=battery)
 
     def test_aggregates_all_fields_into_device_info(self, mock_adb: PoisonPillADB) -> None:
         # Arrange
@@ -295,9 +290,7 @@ class TestDeviceInfo:
         assert info.battery_level == 87
         assert info.state == DeviceState.DEVICE
 
-    def test_unparseable_sdk_version_raises_adb_error(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_unparseable_sdk_version_raises_adb_error(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — corrupted property output
         self._register_device_info_calls(mock_adb, sdk="not-a-number")
         ctrl = ADBController()
@@ -306,9 +299,7 @@ class TestDeviceInfo:
         with pytest.raises(ADBError, match="Unparseable SDK"):
             ctrl.get_device_info()
 
-    def test_missing_screen_size_returns_zero_zero_not_crash(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_missing_screen_size_returns_zero_zero_not_crash(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — simulate a device that returns garbage from `wm size`
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(["adb", "shell", "wm size"], stdout="(no display)\n")
@@ -426,9 +417,7 @@ class TestBattery:
     ) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
-        mock_adb.register(
-            ["adb", "shell", "dumpsys battery | grep level"], stdout=dumpsys_output
-        )
+        mock_adb.register(["adb", "shell", "dumpsys battery | grep level"], stdout=dumpsys_output)
         ctrl = ADBController()
 
         # Act + Assert
@@ -469,9 +458,7 @@ class TestKeyEvents:
     ) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
-        mock_adb.register(
-            ["adb", "shell", f"input keyevent {expected_keycode}"], stdout=""
-        )
+        mock_adb.register(["adb", "shell", f"input keyevent {expected_keycode}"], stdout="")
         ctrl = ADBController()
 
         # Act

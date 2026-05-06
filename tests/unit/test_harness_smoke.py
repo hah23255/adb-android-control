@@ -17,7 +17,6 @@ import pytest
 
 from tests.conftest import PoisonPillADB, UnmockedADBCallError
 
-
 pytestmark = pytest.mark.unit
 
 
@@ -133,8 +132,11 @@ class TestMockADBFixture:
 class TestFakeDevice:
     """Test-data factory fixture (Doctrine Pattern: factories)."""
 
-    def test_default_has_no_real_pii(self, fake_device) -> None:  # noqa: ANN001
-        """internal lesson (PII pre-commit gate) enforcement — fake fixtures must never hold real values."""
+    def test_default_has_no_real_pii(self, fake_device) -> None:
+        """internal lesson (PII pre-commit gate) enforcement.
+
+        Fake fixtures must never hold real values.
+        """
         # Arrange + Act
         d = fake_device
 
@@ -143,7 +145,7 @@ class TestFakeDevice:
         assert d.model.startswith("Pixel-")  # generic test name
         # No real BSSID, IP, SSID anywhere in the dataclass
 
-    def test_factory_overrides_apply(self, fake_device_factory) -> None:  # noqa: ANN001
+    def test_factory_overrides_apply(self, fake_device_factory) -> None:
         # Arrange + Act
         low_battery = fake_device_factory(battery_level=3)
 
@@ -155,7 +157,7 @@ class TestFakeDevice:
 class TestFrozenClock:
     """Time determinism (Doctrine Law 8)."""
 
-    def test_time_is_pinned(self, frozen_clock) -> None:  # noqa: ANN001, ARG002
+    def test_time_is_pinned(self, frozen_clock) -> None:
         # Arrange + Act
         from datetime import datetime, timezone
 

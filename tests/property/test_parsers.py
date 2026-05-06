@@ -17,6 +17,7 @@ Doctrine
 from __future__ import annotations
 
 import string
+from typing import ClassVar
 
 import pytest
 from hypothesis import HealthCheck, assume, example, given, settings
@@ -78,10 +79,8 @@ class TestFreqToChannelProperties:
         if ch == 14:
             assert freq == 2484, f"ch=14 must come from freq=2484, got {freq}"
         else:
-            assert 1 <= ch <= 13, f"2.4 GHz channel out of [1,13] ∪ {{14}}: {ch}"
-            assert freq == 2412 + (ch - 1) * 5, (
-                f"Off-grid 2.4 GHz: freq={freq} fabricated ch={ch}"
-            )
+            assert 1 <= ch <= 13, f"2.4 GHz channel out of [1,13] or {{14}}: {ch}"
+            assert freq == 2412 + (ch - 1) * 5, f"Off-grid 2.4 GHz: freq={freq} fabricated ch={ch}"
 
     @SHALLOW_FUZZ
     @given(freq=st.integers(min_value=5000, max_value=5900))
@@ -92,9 +91,7 @@ class TestFreqToChannelProperties:
         ch = freq_to_channel(freq)
         if ch == 0:
             return
-        assert freq == 5000 + ch * 5, (
-            f"Off-grid 5 GHz: freq={freq} fabricated ch={ch}"
-        )
+        assert freq == 5000 + ch * 5, f"Off-grid 5 GHz: freq={freq} fabricated ch={ch}"
 
     @SHALLOW_FUZZ
     @given(freq=st.integers(min_value=5900, max_value=7200))
@@ -105,9 +102,7 @@ class TestFreqToChannelProperties:
         ch = freq_to_channel(freq)
         if ch == 0:
             return
-        assert freq == 5955 + (ch - 1) * 5, (
-            f"Off-grid 6 GHz: freq={freq} fabricated ch={ch}"
-        )
+        assert freq == 5955 + (ch - 1) * 5, f"Off-grid 6 GHz: freq={freq} fabricated ch={ch}"
 
     @example(freq=-1)
     @example(freq=0)
@@ -127,7 +122,7 @@ class TestFreqToChannelProperties:
 
 
 class TestFreqToBandProperties:
-    KNOWN_BANDS = {"2.4GHz", "5GHz", "6GHz", "Unknown"}
+    KNOWN_BANDS: ClassVar[set[str]] = {"2.4GHz", "5GHz", "6GHz", "Unknown"}
 
     @DEEP_FUZZ
     @given(freq=st.integers(min_value=-10_000_000, max_value=10_000_000))
@@ -148,8 +143,14 @@ class TestFreqToBandProperties:
 
 
 class TestRssiToQualityProperties:
-    KNOWN_QUALITIES = ("Excellent", "Good", "Fair", "Weak", "Poor")
-    QUALITY_RANK = {q: i for i, q in enumerate(KNOWN_QUALITIES)}
+    KNOWN_QUALITIES: ClassVar[tuple[str, ...]] = (
+        "Excellent",
+        "Good",
+        "Fair",
+        "Weak",
+        "Poor",
+    )
+    QUALITY_RANK: ClassVar[dict[str, int]] = {q: i for i, q in enumerate(KNOWN_QUALITIES)}
 
     @DEEP_FUZZ
     @given(rssi=st.integers(min_value=-200, max_value=50))
@@ -242,7 +243,7 @@ class TestParseLogLineProperties:
             max_size=100,
         ),
     )
-    def test_well_formed_lines_always_parse(  # noqa: PLR0913
+    def test_well_formed_lines_always_parse(
         self,
         month: int,
         day: int,
@@ -387,9 +388,7 @@ class TestRewriteDevicesConfigProperties:
         ),
         port=st.integers(min_value=1, max_value=65535),
     )
-    def test_idempotent_rewrite(
-        self, content: str, name: str, ip: str, port: int
-    ) -> None:
+    def test_idempotent_rewrite(self, content: str, name: str, ip: str, port: int) -> None:
         # Property: rewriting twice with the same args yields the same result
         first = rewrite_devices_config(content, name=name, ip=ip, port=port)
         second = rewrite_devices_config(first, name=name, ip=ip, port=port)
@@ -398,15 +397,11 @@ class TestRewriteDevicesConfigProperties:
     @DEEP_FUZZ
     @given(
         content=st.text(max_size=500),
-        name=st.text(
-            alphabet=string.ascii_uppercase, min_size=3, max_size=10
-        ),
+        name=st.text(alphabet=string.ascii_uppercase, min_size=3, max_size=10),
         ip=st.text(alphabet=string.digits + ".", min_size=7, max_size=15),
         port=st.integers(min_value=1, max_value=65535),
     )
-    def test_line_count_preserved(
-        self, content: str, name: str, ip: str, port: int
-    ) -> None:
+    def test_line_count_preserved(self, content: str, name: str, ip: str, port: int) -> None:
         # Property: rewriting never adds/removes lines
         rewritten = rewrite_devices_config(content, name=name, ip=ip, port=port)
         assert len(content.split("\n")) == len(rewritten.split("\n"))
@@ -422,9 +417,7 @@ def _state_strategy() -> st.SearchStrategy[ConnectionState]:
         ConnectionState,
         timestamp=st.text(max_size=30),
         connected=st.booleans(),
-        ip=st.text(
-            alphabet=string.digits + ".", min_size=0, max_size=15
-        ),
+        ip=st.text(alphabet=string.digits + ".", min_size=0, max_size=15),
         port=st.integers(min_value=0, max_value=65535),
         ssid=st.text(max_size=30),
         rssi_dbm=st.integers(min_value=-150, max_value=0),
@@ -435,18 +428,14 @@ def _state_strategy() -> st.SearchStrategy[ConnectionState]:
 class TestDetectChangesProperties:
     @DEEP_FUZZ
     @given(last=_state_strategy(), current=_state_strategy())
-    def test_never_raises(
-        self, last: ConnectionState, current: ConnectionState
-    ) -> None:
+    def test_never_raises(self, last: ConnectionState, current: ConnectionState) -> None:
         # Property: pure function on any pair of states
         result = detect_changes(last, current)
         assert isinstance(result, list)
 
     @DEEP_FUZZ
     @given(state=_state_strategy())
-    def test_reflexive_equivalence_yields_no_changes(
-        self, state: ConnectionState
-    ) -> None:
+    def test_reflexive_equivalence_yields_no_changes(self, state: ConnectionState) -> None:
         # Property: detect_changes(s, s) == []
         # Identical inputs produce no observed transitions.
         assert detect_changes(state, state) == []
@@ -457,9 +446,7 @@ class TestDetectChangesProperties:
         port=st.integers(min_value=1, max_value=65535),
         ssid=st.text(min_size=1, max_size=20),
     )
-    def test_connect_transition_emits_connected(
-        self, ip: str, port: int, ssid: str
-    ) -> None:
+    def test_connect_transition_emits_connected(self, ip: str, port: int, ssid: str) -> None:
         # Property: any None→connected transition emits CONNECTED
         last = None
         current = ConnectionState(
@@ -480,9 +467,7 @@ class TestDetectChangesProperties:
         port=st.integers(min_value=1, max_value=65535),
         ssid=st.text(min_size=1, max_size=20),
     )
-    def test_disconnect_transition_emits_disconnected(
-        self, ip: str, port: int, ssid: str
-    ) -> None:
+    def test_disconnect_transition_emits_disconnected(self, ip: str, port: int, ssid: str) -> None:
         # Property: any connected→disconnected transition emits DISCONNECTED
         last = ConnectionState(
             timestamp="t",

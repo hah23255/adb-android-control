@@ -96,11 +96,14 @@ class CrashEvent:
 
 _LOGCAT_LINE_RE = re.compile(
     r"^(\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+)"  # timestamp
-    r"\s+(\d+)\s+(\d+)"                          # pid, tid
-    r"\s+([VDIWEF])"                              # level
-    r"\s+([^:]+):"                                # tag
-    r"\s*(.*)$"                                   # message
-)
+    r"\s+(\d+)\s+(\d+)"  # pid, tid
+    r"\s+([A-Z])"  # level — accept any uppercase
+    r"\s+([^:]+):"  # tag    letter so non-standard
+    r"\s*(.*)$"  # message  letters (e.g. some
+)  # vendor adb builds emit X)
+# are passed through rather
+# than dropped (Adaptive
+# Fault Tolerance pattern).
 
 
 class LogcatMonitor:
@@ -238,7 +241,11 @@ class LogcatMonitor:
 # ---------------------------------------------------------------------------
 
 
-_CPU_PCT_RE = re.compile(r"(\d+(?:\.\d+)?)[%\s]*(?:cpu|user|idle)", re.IGNORECASE)
+# Match the first percentage value on a CPU-grepped line. The shell pipeline
+# already filters to CPU lines via `grep -E 'CPU|cpu'`, so the regex does not
+# need to re-validate the keyword. This accepts both real Android top format
+# (`80%user 0%nice 50%sys`) and userland tools that emit `user 23.5%` order.
+_CPU_PCT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 _MEMINFO_KB_RE = re.compile(r"(\d+)")
 _DISK_PCT_RE = re.compile(r"(\d+)%")
 

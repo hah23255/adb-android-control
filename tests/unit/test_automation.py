@@ -8,8 +8,7 @@ behaviour-only (Law 2).
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,6 +25,10 @@ from adb_android_control.automation import (
     StepOutcome,
 )
 from adb_android_control.controller import ADBController, DeviceInfo, DeviceState
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 pytestmark = pytest.mark.unit
 
@@ -111,7 +114,7 @@ class TestStepDispatch:
     )
     def test_known_actions_call_correct_controller_method(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
         action: str,
         params: dict[str, object],
@@ -132,7 +135,7 @@ class TestStepDispatch:
 
     def test_unknown_action_returns_failed_outcome(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -148,7 +151,7 @@ class TestStepDispatch:
 
     def test_action_lookup_is_case_insensitive(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -162,14 +165,15 @@ class TestStepDispatch:
 
     def test_handler_exception_is_caught_and_returned_as_failure(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
         mock_controller.tap.side_effect = RuntimeError("boom")
         auto = ADBAutomation(adb=mock_controller)
 
-        # Act — internal lesson (adaptive fault tolerance): graceful degradation, no exception bubbles
+        # Act — internal lesson (adaptive fault tolerance): graceful
+        # degradation, no exception bubbles
         outcome = auto.execute_step(AutomationStep("tap", {"x": 1, "y": 2}, delay_after_s=0))
 
         # Assert
@@ -178,7 +182,7 @@ class TestStepDispatch:
 
     def test_screenshot_action_returns_artifact_path(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -252,7 +256,7 @@ class TestStepDelay:
 class TestRunWorkflow:
     def test_all_steps_succeed_returns_success_result(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -274,7 +278,7 @@ class TestRunWorkflow:
 
     def test_failed_step_with_stop_on_error_aborts_workflow(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -297,7 +301,7 @@ class TestRunWorkflow:
 
     def test_failed_step_with_continue_on_error_finishes_workflow(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -318,7 +322,7 @@ class TestRunWorkflow:
 
     def test_screenshots_collected_into_result_tuple(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -345,7 +349,7 @@ class TestRunFromJson:
     def test_loads_steps_from_json_file(
         self,
         tmp_path: Path,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -376,7 +380,7 @@ class TestRunFromJson:
 class TestAppTester:
     def test_install_failure_short_circuits_with_typed_result(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -384,7 +388,7 @@ class TestAppTester:
         tester = AppTester(adb=mock_controller)
 
         # Act
-        result = tester.install_and_launch("/tmp/app.apk", "com.foo")
+        result = tester.install_and_launch("/tmp/app.apk", "com.foo")  # noqa: S108
 
         # Assert
         assert isinstance(result, InstallAndLaunchResult)
@@ -394,7 +398,7 @@ class TestAppTester:
 
     def test_install_success_then_launch_with_screenshot(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -402,7 +406,9 @@ class TestAppTester:
 
         # Act
         result = tester.install_and_launch(
-            "/tmp/app.apk", "com.foo", take_screenshot=True
+            "/tmp/app.apk",  # noqa: S108
+            "com.foo",
+            take_screenshot=True,
         )
 
         # Assert
@@ -414,7 +420,7 @@ class TestAppTester:
 
     def test_stress_test_invokes_monkey_with_total_events(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -425,9 +431,7 @@ class TestAppTester:
 
         # Assert
         assert result == {"duration_s": 10, "events": 50, "package": "com.foo"}
-        mock_controller.shell.assert_called_once_with(
-            "monkey -p com.foo --throttle 100 -v 50"
-        )
+        mock_controller.shell.assert_called_once_with("monkey -p com.foo --throttle 100 -v 50")
 
 
 # ---------------------------------------------------------------------------
@@ -438,16 +442,14 @@ class TestAppTester:
 class TestDeviceManager:
     def test_health_check_returns_complete_schema(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
         mock_controller.shell.side_effect = lambda cmd: {
             "df -h /data | tail -1": "/data 50G 25G 25G 50% /data",
             "cat /proc/meminfo | head -3": (
-                "MemTotal: 8000000 kB\n"
-                "MemFree: 2000000 kB\n"
-                "MemAvailable: 4000000 kB"
+                "MemTotal: 8000000 kB\nMemFree: 2000000 kB\nMemAvailable: 4000000 kB"
             ),
         }[cmd]
         mgr = DeviceManager(adb=mock_controller)
@@ -472,7 +474,7 @@ class TestDeviceManager:
 
     def test_cleanup_device_only_clears_requested_locations(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -490,7 +492,7 @@ class TestDeviceManager:
 
     def test_batch_uninstall_returns_per_package_outcome(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -512,7 +514,7 @@ class TestDeviceManager:
 class TestScreenRecorder:
     def test_start_marks_recording_and_calls_screen_record(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -529,7 +531,7 @@ class TestScreenRecorder:
 
     def test_double_start_is_idempotent(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -544,7 +546,7 @@ class TestScreenRecorder:
 
     def test_stop_and_pull_pulls_then_removes_remote(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange
@@ -562,7 +564,7 @@ class TestScreenRecorder:
 
     def test_stop_and_pull_returns_false_when_pull_fails(
         self,
-        stub_clock: list[float],  # noqa: ARG002
+        stub_clock: list[float],
         mock_controller: ADBController,
     ) -> None:
         # Arrange

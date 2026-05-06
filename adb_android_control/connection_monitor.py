@@ -96,9 +96,7 @@ def detect_changes(
 
     if last is None:
         if current.connected:
-            changes.append(
-                Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}")
-            )
+            changes.append(Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}"))
         return changes
 
     if last.connected and not current.connected:
@@ -109,22 +107,14 @@ def detect_changes(
             )
         )
     elif not last.connected and current.connected:
-        changes.append(
-            Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}")
-        )
+        changes.append(Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}"))
     elif current.connected and last.port != current.port:
-        changes.append(
-            Change(ChangeType.PORT_CHANGED, f"{last.port} → {current.port}")
-        )
+        changes.append(Change(ChangeType.PORT_CHANGED, f"{last.port} → {current.port}"))
     elif current.connected and last.ip != current.ip:
-        changes.append(
-            Change(ChangeType.NETWORK_CHANGED, f"{last.ip} → {current.ip}")
-        )
+        changes.append(Change(ChangeType.NETWORK_CHANGED, f"{last.ip} → {current.ip}"))
 
     if last.ssid != current.ssid and current.ssid != "Unknown":
-        changes.append(
-            Change(ChangeType.WIFI_CHANGED, f"{last.ssid} → {current.ssid}")
-        )
+        changes.append(Change(ChangeType.WIFI_CHANGED, f"{last.ssid} → {current.ssid}"))
 
     if abs(last.rssi_dbm - current.rssi_dbm) > signal_threshold_db:
         changes.append(
@@ -210,9 +200,12 @@ def termux_notifier(title: str, message: str) -> None:
         subprocess.run(
             [
                 "termux-notification",
-                "-t", title,
-                "-c", message,
-                "--priority", "high",
+                "-t",
+                title,
+                "-c",
+                message,
+                "--priority",
+                "high",
             ],
             timeout=5,
             check=False,

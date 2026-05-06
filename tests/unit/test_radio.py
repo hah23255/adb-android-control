@@ -57,9 +57,7 @@ class TestFrequencyToChannel:
             (5900, 0),  # gap between 5GHz and 6GHz
         ],
     )
-    def test_frequency_to_channel_mapping(
-        self, freq: int, expected_channel: int
-    ) -> None:
+    def test_frequency_to_channel_mapping(self, freq: int, expected_channel: int) -> None:
         # Arrange + Act + Assert
         assert freq_to_channel(freq) == expected_channel
 
@@ -93,9 +91,7 @@ class TestFrequencyToChannel:
         # 6 GHz off-grid frequencies must return 0.
         assert freq_to_channel(freq) == 0
 
-    @pytest.mark.parametrize(
-        "freq", [2411, 2485, 5169, 5826, 5954, 7116]
-    )
+    @pytest.mark.parametrize("freq", [2411, 2485, 5169, 5826, 5954, 7116])
     def test_band_boundary_just_outside_returns_zero(self, freq: int) -> None:
         # One MHz outside any band's outer envelope must return 0.
         assert freq_to_channel(freq) == 0
@@ -281,9 +277,7 @@ class TestParseBluetoothDevices:
     def test_extracts_address_name_pairs(self) -> None:
         # Arrange
         out = (
-            "Connected devices:\n"
-            "  AA:11:22:33:44:55  Headphones\n"
-            "  BB:11:22:33:44:55  CarStereo\n"
+            "Connected devices:\n  AA:11:22:33:44:55  Headphones\n  BB:11:22:33:44:55  CarStereo\n"
         )
 
         # Act
@@ -332,7 +326,10 @@ def _mock_controller() -> ADBController:
 
 
 class TestRadioScannerErrorPaths:
-    """internal lesson (adaptive fault tolerance) — Adaptive Fault Tolerance. Each probe degrades to a sensible default."""
+    """internal lesson (adaptive fault tolerance).
+
+    Adaptive Fault Tolerance: each probe degrades to a sensible default.
+    """
 
     def test_get_wifi_returns_none_when_shell_fails(self) -> None:
         # Arrange
@@ -433,9 +430,7 @@ class TestRadioScannerHappyPath:
 
 
 class TestTermuxFallback:
-    def test_returns_none_when_termux_binary_missing(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_none_when_termux_binary_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange
         import subprocess as sp
 
@@ -447,9 +442,7 @@ class TestTermuxFallback:
         # Act + Assert
         assert RadioScanner.get_wifi_via_termux() is None
 
-    def test_returns_none_when_output_is_not_json(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_none_when_output_is_not_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange
         import subprocess as sp
 
@@ -466,9 +459,7 @@ class TestTermuxFallback:
         # Act + Assert
         assert RadioScanner.get_wifi_via_termux() is None
 
-    def test_returns_dict_for_valid_json(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_dict_for_valid_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange
         import subprocess as sp
 

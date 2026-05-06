@@ -7,8 +7,7 @@ No real network, no real subprocess.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -19,6 +18,9 @@ from adb_android_control.port_scan import (
     save_last_port,
     update_devices_file,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pytestmark = pytest.mark.unit
 
@@ -34,9 +36,7 @@ class TestRewriteDevicesConfig:
         content = "ZFOLD7=10.0.0.1:5555\nOTHER=192.168.1.5:5555\n"
 
         # Act
-        result = rewrite_devices_config(
-            content, name="ZFOLD7", ip="10.0.0.2", port=42891
-        )
+        result = rewrite_devices_config(content, name="ZFOLD7", ip="10.0.0.2", port=42891)
 
         # Assert
         assert "ZFOLD7=10.0.0.2:42891" in result
@@ -47,9 +47,7 @@ class TestRewriteDevicesConfig:
         content = "# my devices\nZFOLD7=10.0.0.1:5555\n# end\n"
 
         # Act
-        result = rewrite_devices_config(
-            content, name="ZFOLD7", ip="10.0.0.1", port=9999
-        )
+        result = rewrite_devices_config(content, name="ZFOLD7", ip="10.0.0.1", port=9999)
 
         # Assert
         assert "# my devices" in result
@@ -61,9 +59,7 @@ class TestRewriteDevicesConfig:
         content = "OTHER=10.0.0.1:5555\n"
 
         # Act
-        result = rewrite_devices_config(
-            content, name="ZFOLD7", ip="10.0.0.1", port=9999
-        )
+        result = rewrite_devices_config(content, name="ZFOLD7", ip="10.0.0.1", port=9999)
 
         # Assert — same content, just round-tripped through split/join
         assert result.strip() == content.strip()
