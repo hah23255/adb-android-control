@@ -5,8 +5,8 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Doctrine](https://img.shields.io/badge/Master%20Tester%20Doctrine-1.0-purple.svg)](docs/TESTING_DOCTRINE.md)
-[![Tests](https://img.shields.io/badge/tests-273-brightgreen.svg)](tests/)
-[![Test ratio](https://img.shields.io/badge/test%2Fcode-1.56%3A1-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-338-brightgreen.svg)](tests/)
+[![Test ratio](https://img.shields.io/badge/test%2Fcode-1.59%3A1-brightgreen.svg)](tests/)
 [![Type check](https://img.shields.io/badge/mypy-strict-blue.svg)](pyproject.toml)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-orange.svg)](.pre-commit-config.yaml)
 
@@ -31,8 +31,8 @@ adb-control workflow ./my-test.json
 Built around three principles:
 
 1. **Behavioural test contracts.** Every public method has a typed test
-   exercising the failure mode it claims to handle. 273 tests today,
-   1.56 : 1 test/code ratio.
+   exercising the failure mode it claims to handle. 338 tests today,
+   1.59 : 1 test/code ratio.
 2. **No hidden subprocess interleaving.** Every shell-out goes through
    `ADBController` (or one flagged streaming carve-out). No `shell=True`
    anywhere. Argv lists only.
@@ -45,7 +45,7 @@ Built around three principles:
 ### As a Python package
 
 ```bash
-# From source (until PyPI publish in Phase 7)
+# From source (PyPI publish pending)
 pip install -e ".[dev]"
 
 # Or just the runtime dependencies
@@ -112,7 +112,7 @@ adb-control monitor crash            # crash detector
 adb-control radio                    # WiFi + Bluetooth status
 adb-control workflow ./test.json     # run an automation workflow
 adb-control health                   # JSON health check
-adb-control --version                # 1.1.0-rc1
+adb-control --version                # 2.0.0
 ```
 
 ### 4. Author a workflow
@@ -188,7 +188,7 @@ This project is governed by the **Master Tester Doctrine** (HH directive
 ### Run the tests
 
 ```bash
-pytest                       # 273 tests; ~10–20K Hypothesis examples
+pytest                       # 338 tests; ~10-20K Hypothesis examples
 pytest -m unit               # unit only (default)
 pytest -m property           # property-based fuzzing
 pytest -m race               # threading + concurrency
@@ -203,14 +203,14 @@ pytest --cov                 # coverage report
 | 1. Test foundation + 8 modules | ✅ `phase-1b-complete` |
 | 2. Code quality + CLI | ✅ `phase-2-complete` |
 | 3. Hypothesis + race + failure injection | ✅ `phase-3-complete` |
-| 4. Documentation | 🟡 in progress |
-| 5. Discoverability | ⏸️ |
-| 6. Visual polish (logo + GIFs) | ⏸️ |
-| 7. CI matrix + Codecov + CodeQL | ⏸️ |
-| 8. v2.0 GA | ⏸️ |
+| 4. Documentation | ✅ shipped with v2.0 GA |
+| 5. Discoverability | ✅ shipped with v2.0 GA |
+| 6. Visual polish (logo + GIFs) | 🟡 in progress |
+| 7. CI matrix + Codecov + CodeQL | ✅ shipped with v2.0 GA |
+| 8. v2.0 GA | ✅ **2026-05-05** 🚀 |
 
-Currently in **private development** ahead of v2.0 public release.
-Roadmap and phase deliverables are tracked in `CHANGELOG.md`.
+**Public GA shipped 2026-05-05** (v2.0.0 — see [CHANGELOG](CHANGELOG.md)).
+Roadmap and per-release deliverables are tracked in `CHANGELOG.md`.
 
 ## Documentation
 
@@ -229,8 +229,8 @@ Roadmap and phase deliverables are tracked in `CHANGELOG.md`.
 
 ## Contributing
 
-PRs welcome once we hit v2.0 public. For now, see
-[`CONTRIBUTING.md`](CONTRIBUTING.md) for the doctrine-aligned workflow.
+PRs welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the
+doctrine-aligned workflow.
 
 ## License
 
