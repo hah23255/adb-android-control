@@ -47,14 +47,14 @@
 
   <!-- Stats row -->
   <g font-family="ui-sans-serif, system-ui, sans-serif">
-    <!-- 273 tests -->
+    <!-- 338 tests -->
     <g transform="translate(80,400)">
-      <text font-size="56" fill="#83c5be" font-weight="700">273</text>
+      <text font-size="56" fill="#83c5be" font-weight="700">338</text>
       <text x="0" y="32" font-size="18" fill="#778da9">tests</text>
     </g>
-    <!-- 1.76:1 ratio -->
+    <!-- 1.59:1 ratio -->
     <g transform="translate(280,400)">
-      <text font-size="56" fill="#83c5be" font-weight="700">1.76:1</text>
+      <text font-size="56" fill="#83c5be" font-weight="700">1.59:1</text>
       <text x="0" y="32" font-size="18" fill="#778da9">test/code ratio</text>
     </g>
     <!-- 9 modules -->
