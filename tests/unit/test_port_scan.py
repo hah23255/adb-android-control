@@ -7,8 +7,7 @@ No real network, no real subprocess.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -19,6 +18,9 @@ from adb_android_control.port_scan import (
     save_last_port,
     update_devices_file,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pytestmark = pytest.mark.unit
 

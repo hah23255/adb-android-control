@@ -19,25 +19,25 @@ from __future__ import annotations
 import json
 import threading
 from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 import pytest
-from freezegun import freeze_time
 
 from adb_android_control.connection_monitor import (
-    ChangeType,
     ConnectionMonitor,
-    ConnectionState,
 )
 from adb_android_control.controller import ADBController
 from adb_android_control.monitor import (
     CrashEvent,
     CrashMonitor,
-    LogEntry,
     LogcatMonitor,
+    LogEntry,
 )
 from adb_android_control.port_scan import PortScanner
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from unittest.mock import MagicMock
 
 pytestmark = [pytest.mark.unit, pytest.mark.race]
 
@@ -302,7 +302,12 @@ class TestCrashRateOverFixedWindow:
         # Act
         cm.crashes.extend(
             [
-                CrashEvent(timestamp=f"01-01 00:00:00.00{i}", tag="X", message=f"c{i}", level="ERROR")
+                CrashEvent(
+                    timestamp=f"01-01 00:00:00.00{i}",
+                    tag="X",
+                    message=f"c{i}",
+                    level="ERROR",
+                )
                 for i in range(5)
             ]
         )

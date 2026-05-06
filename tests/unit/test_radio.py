@@ -332,7 +332,10 @@ def _mock_controller() -> ADBController:
 
 
 class TestRadioScannerErrorPaths:
-    """internal lesson (adaptive fault tolerance) — Adaptive Fault Tolerance. Each probe degrades to a sensible default."""
+    """internal lesson (adaptive fault tolerance).
+
+    Adaptive Fault Tolerance: each probe degrades to a sensible default.
+    """
 
     def test_get_wifi_returns_none_when_shell_fails(self) -> None:
         # Arrange

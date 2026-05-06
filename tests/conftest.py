@@ -16,13 +16,14 @@ Every test gets:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from freezegun import freeze_time
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 # ---------------------------------------------------------------------------
 # Poison-Pill subprocess mock (Doctrine Pattern: Poison-Pill Mock)

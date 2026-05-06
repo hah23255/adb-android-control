@@ -29,7 +29,7 @@ class TestArgparseLayout:
 
         # Assert — drill into the subparsers action to enumerate
         sub_actions = [
-            a for a in parser._actions if isinstance(a, argparse._SubParsersAction)  # noqa: SLF001
+            a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
         ]
         assert sub_actions, "Parser must have a subparsers action"
         choices = set(sub_actions[0].choices.keys())
@@ -61,14 +61,14 @@ class TestArgparseLayout:
             (["devices"], "devices"),
             (["info"], "info"),
             (["shot"], "shot"),
-            (["shot", "/tmp/x.png"], "shot"),
+            (["shot", "/tmp/x.png"], "shot"),  # noqa: S108
             (["health"], "health"),
             (["radio", "wifi", "scan"], "radio"),
             (["scan-port", "10.0.0.1"], "scan-port"),
             (["scan-port", "10.0.0.1", "--start", "5550", "--end", "5560"], "scan-port"),
             (["monitor", "logcat"], "monitor"),
             (["monitor", "perf", "--interval", "2.5"], "monitor"),
-            (["workflow", "/tmp/wf.json"], "workflow"),
+            (["workflow", "/tmp/wf.json"], "workflow"),  # noqa: S108
             (["connection"], "connection"),
             (["connection", "check"], "connection"),
         ],

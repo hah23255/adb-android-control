@@ -17,6 +17,7 @@ Doctrine
 from __future__ import annotations
 
 import string
+from typing import ClassVar
 
 import pytest
 from hypothesis import HealthCheck, assume, example, given, settings
@@ -129,7 +130,7 @@ class TestFreqToChannelProperties:
 
 
 class TestFreqToBandProperties:
-    KNOWN_BANDS = {"2.4GHz", "5GHz", "6GHz", "Unknown"}
+    KNOWN_BANDS: ClassVar[set[str]] = {"2.4GHz", "5GHz", "6GHz", "Unknown"}
 
     @DEEP_FUZZ
     @given(freq=st.integers(min_value=-10_000_000, max_value=10_000_000))
@@ -150,8 +151,12 @@ class TestFreqToBandProperties:
 
 
 class TestRssiToQualityProperties:
-    KNOWN_QUALITIES = ("Excellent", "Good", "Fair", "Weak", "Poor")
-    QUALITY_RANK = {q: i for i, q in enumerate(KNOWN_QUALITIES)}
+    KNOWN_QUALITIES: ClassVar[tuple[str, ...]] = (
+        "Excellent", "Good", "Fair", "Weak", "Poor",
+    )
+    QUALITY_RANK: ClassVar[dict[str, int]] = {
+        q: i for i, q in enumerate(KNOWN_QUALITIES)
+    }
 
     @DEEP_FUZZ
     @given(rssi=st.integers(min_value=-200, max_value=50))
@@ -244,7 +249,7 @@ class TestParseLogLineProperties:
             max_size=100,
         ),
     )
-    def test_well_formed_lines_always_parse(  # noqa: PLR0913
+    def test_well_formed_lines_always_parse(
         self,
         month: int,
         day: int,

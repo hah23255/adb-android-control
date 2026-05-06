@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -30,12 +30,16 @@ from adb_android_control.controller import ADBController, ADBError
 from adb_android_control.monitor import (
     CrashEvent,
     CrashMonitor,
-    LogEntry,
     LogcatMonitor,
+    LogEntry,
     PerformanceMonitor,
     PerformanceSnapshot,
 )
-from tests.conftest import PoisonPillADB
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from tests.conftest import PoisonPillADB
 
 pytestmark = pytest.mark.unit
 
@@ -106,7 +110,8 @@ class TestLogcatParser:
         # Arrange + Act
         entry = LogcatMonitor.parse_log_line(garbage_line)
 
-        # Assert — degraded path: skip, don't raise (internal lesson (adaptive fault tolerance) — graceful fallback)
+        # Assert — degraded path: skip, don't raise
+        # (internal lesson (adaptive fault tolerance) — graceful fallback)
         assert entry is None
 
     def test_unknown_level_letter_passes_through_uppercased(self) -> None:
@@ -235,7 +240,10 @@ class TestPerformanceMonitor:
         assert mon.snapshots == [snap]
 
     def test_failed_cpu_query_degrades_to_zero(self) -> None:
-        """internal lesson (adaptive fault tolerance) — Adaptive Fault Tolerance: one bad probe doesn't kill the loop."""
+        """internal lesson (adaptive fault tolerance).
+
+        Adaptive Fault Tolerance: one bad probe doesn't kill the loop.
+        """
         # Arrange — only register the queries that should succeed
         adb = _make_mock_controller(
             **{

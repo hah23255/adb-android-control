@@ -3,8 +3,9 @@
 Doctrine
 --------
 - Master Tester Doctrine § Advanced Patterns: "OOM on CI" warns about
-  signal/exit-code edge cases. internal lesson (adaptive fault tolerance) ("Adaptive Fault Tolerance")
-  demands graceful degradation on every transient failure path.
+  signal/exit-code edge cases. internal lesson (adaptive fault tolerance)
+  ("Adaptive Fault Tolerance") demands graceful degradation on every
+  transient failure path.
 - Each test injects a *specific failure mode* into the underlying I/O
   layer and asserts:
     1. The right typed exception is raised, OR
@@ -38,7 +39,7 @@ from __future__ import annotations
 import errno
 import socket
 import subprocess
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -52,7 +53,9 @@ from adb_android_control.controller import (
 )
 from adb_android_control.port_scan import check_port, try_adb_connect
 from adb_android_control.usb import identify_via_fd
-from tests.conftest import PoisonPillADB
+
+if TYPE_CHECKING:
+    from tests.conftest import PoisonPillADB
 
 pytestmark = pytest.mark.unit
 
@@ -80,7 +83,7 @@ class TestControllerExitCodeClassification:
         # Act + Assert — generic ADBError (NOT timeout-specific because
         # subprocess.run didn't raise TimeoutExpired; the wrapper did)
         with pytest.raises(ADBError) as excinfo:
-            ctrl._shell("ls")  # noqa: SLF001
+            ctrl._shell("ls")
         # Should NOT be misclassified as DeviceOfflineError or
         # ADBPermissionError (those require specific stderr markers)
         assert not isinstance(excinfo.value, DeviceOfflineError)
@@ -100,7 +103,7 @@ class TestControllerExitCodeClassification:
 
         # Act + Assert
         with pytest.raises(ADBError):
-            ctrl._shell("dumpsys")  # noqa: SLF001
+            ctrl._shell("dumpsys")
 
     def test_subprocess_timeout_expired_raises_adb_timeout_error(
         self, monkeypatch: pytest.MonkeyPatch, mock_adb: PoisonPillADB
@@ -117,7 +120,7 @@ class TestControllerExitCodeClassification:
 
         # Act + Assert
         with pytest.raises(ADBTimeoutError) as excinfo:
-            ctrl._shell("ls")  # noqa: SLF001
+            ctrl._shell("ls")
         assert "timed out" in str(excinfo.value).lower()
 
     def test_construction_with_filenotfounderror_raises_adb_not_found(

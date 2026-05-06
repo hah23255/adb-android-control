@@ -10,7 +10,7 @@ documents an observable contract. We never test private methods directly
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -24,7 +24,11 @@ from adb_android_control.controller import (
     DeviceOfflineError,
     DeviceState,
 )
-from tests.conftest import PoisonPillADB
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from tests.conftest import PoisonPillADB
 
 pytestmark = pytest.mark.unit
 
@@ -86,8 +90,11 @@ class TestErrorClassification:
     ) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
+        # NB: ADBController._shell forwards ``cmd`` as a single argv element
+        # to ``_run(["shell", cmd])`` — see controller.py:200. The mock argv
+        # therefore matches that joined form, not a split form.
         mock_adb.register(
-            ["adb", "shell", "getprop", "ro.product.model"],
+            ["adb", "shell", "getprop ro.product.model"],
             stderr="error: device offline",
             returncode=1,
         )
@@ -103,7 +110,7 @@ class TestErrorClassification:
         # Arrange — unauthorized devices share the offline-class semantics
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(
-            ["adb", "shell", "wm", "size"],
+            ["adb", "shell", "wm size"],
             stderr="error: device unauthorized.\nThis adb server's $ADB_VENDOR_KEYS is not set",
             returncode=1,
         )
@@ -127,7 +134,7 @@ class TestErrorClassification:
 
         # Act + Assert
         with pytest.raises(ADBPermissionError):
-            ctrl._shell("cat /data/secret")  # noqa: SLF001 — testing classification
+            ctrl._shell("cat /data/secret")
 
     def test_typed_errors_inherit_from_adbe_rror(self) -> None:
         # Arrange + Act + Assert — base-class catch-all must work

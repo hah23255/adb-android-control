@@ -17,12 +17,12 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 import concurrent.futures
 import logging
 import socket
 import subprocess
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

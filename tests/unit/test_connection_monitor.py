@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -23,6 +22,9 @@ from adb_android_control.connection_monitor import (
     detect_changes,
     parse_adb_devices,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pytestmark = pytest.mark.unit
 
