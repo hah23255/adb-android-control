@@ -5,6 +5,37 @@ All notable changes to `adb-android-control` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `radio.freq_to_channel` no longer fabricates channel numbers for
+  off-grid Wi-Fi frequencies. Previously, frequencies in the 2.4 GHz
+  gap band (2473–2483 MHz) and any non-5-MHz-aligned 5 GHz / 6 GHz
+  frequency would return invalid channel numbers (e.g. 13 from 2473,
+  15 from 2483, 34 from 5171, 164 from 5824). They now correctly
+  return `0` ("unknown"). The function validates input alignment to
+  the canonical IEEE 802.11 channel-center grid in addition to the
+  per-band frequency range. Closes #4.
+
+### Changed
+- `radio.freq_to_channel` 5 GHz formula simplified from
+  `(freq - 5170) // 5 + 34` to the algebraically equivalent
+  `(freq - 5000) // 5`, matching the natural 802.11 channel
+  convention (`channel = freq / 5 - 1000`) and making alignment
+  visible in the source.
+- `radio.freq_to_band` docstring now documents that band
+  classification is intentionally permissive (coarser than channel)
+  and refers callers to `freq_to_channel` for the strict mapping.
+
+### Added
+- Alignment-invariant Hypothesis properties for all three Wi-Fi bands
+  (`test_24ghz_alignment_invariant`, `test_5ghz_alignment_invariant`,
+  `test_6ghz_alignment_invariant`). These replace range-only
+  properties whose detection rate on this bug class was 3.4 %; the
+  new properties catch every off-grid mis-mapping (100 %).
+- Hand-written gap-band, off-grid, and band-boundary parametrised
+  tests in `tests/unit/test_radio.py::TestFrequencyToChannel`.
+
 ## [2.0.0] — 2026-05-05 — Public GA 🚀
 
 First public release after the v1.0.x → v2.0 rebuild. The package is

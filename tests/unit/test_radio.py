@@ -41,6 +41,7 @@ class TestFrequencyToChannel:
             (2412, 1),
             (2437, 6),
             (2462, 11),
+            (2472, 13),
             (2484, 14),  # special-case channel 14
             # 5 GHz
             (5180, 36),
@@ -48,7 +49,7 @@ class TestFrequencyToChannel:
             (5825, 165),
             # 6 GHz
             (5955, 1),
-            (5980, 6),
+            (5975, 5),
             (7115, 233),
             # Out of range → 0
             (1, 0),
@@ -61,6 +62,43 @@ class TestFrequencyToChannel:
     ) -> None:
         # Arrange + Act + Assert
         assert freq_to_channel(freq) == expected_channel
+
+    # ------------------------------------------------------------------
+    # Issue #4 — off-grid frequencies must return 0, not a fictional
+    # channel number. Hand-written cases complement the alignment-
+    # invariant Hypothesis properties.
+    # ------------------------------------------------------------------
+
+    @pytest.mark.parametrize("freq", [2473, 2474, 2477, 2480, 2483])
+    def test_24ghz_gap_band_returns_zero(self, freq: int) -> None:
+        # The 12 MHz gap between channel 13 (2472) and channel 14 (2484)
+        # has no channel; the buggy implementation mapped these to 13/14/15.
+        assert freq_to_channel(freq) == 0
+
+    @pytest.mark.parametrize("freq", [2413, 2414, 2415, 2416, 2418, 2438])
+    def test_24ghz_off_grid_returns_zero(self, freq: int) -> None:
+        # Sub-5-MHz offsets inside the 2.4 GHz band must not be mapped.
+        assert freq_to_channel(freq) == 0
+
+    @pytest.mark.parametrize("freq", [5171, 5172, 5181, 5189, 5821, 5824])
+    def test_5ghz_off_grid_returns_zero(self, freq: int) -> None:
+        # 5 GHz frequencies not aligned to the 5 MHz channel grid (i.e.
+        # ``(freq - 5000) % 5 != 0``). Buggy implementation fabricated
+        # channels 34, 37, 164. Note: 5175 IS aligned (channel 35), so
+        # it is intentionally excluded here.
+        assert freq_to_channel(freq) == 0
+
+    @pytest.mark.parametrize("freq", [5956, 5957, 5974, 7114])
+    def test_6ghz_off_grid_returns_zero(self, freq: int) -> None:
+        # 6 GHz off-grid frequencies must return 0.
+        assert freq_to_channel(freq) == 0
+
+    @pytest.mark.parametrize(
+        "freq", [2411, 2485, 5169, 5826, 5954, 7116]
+    )
+    def test_band_boundary_just_outside_returns_zero(self, freq: int) -> None:
+        # One MHz outside any band's outer envelope must return 0.
+        assert freq_to_channel(freq) == 0
 
 
 class TestFrequencyToBand:
