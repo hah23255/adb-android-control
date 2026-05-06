@@ -36,20 +36,47 @@ logger = logging.getLogger(__name__)
 
 
 def freq_to_channel(freq_mhz: int) -> int:
-    """Convert Wi-Fi frequency (MHz) to channel number. Returns 0 if unknown."""
-    if 2412 <= freq_mhz <= 2484:
-        if freq_mhz == 2484:
-            return 14
+    """Convert Wi-Fi frequency (MHz) to IEEE 802.11 channel number.
+
+    Returns ``0`` if the frequency is not on the canonical channel-center
+    grid for any supported band.
+
+    The function validates *alignment* to the per-band 5 MHz grid in
+    addition to the per-band frequency range. Off-grid inputs (gap-band
+    frequencies, sub-MHz offsets) return ``0`` rather than a fictional
+    channel number — see issue #4.
+
+    Channel plans:
+
+    - 2.4 GHz: channels 1–13 at ``2412 + 5 * (n - 1)`` MHz; channel 14
+      alone at 2484 MHz. Frequencies 2473–2483 are the 12 MHz gap and
+      have no channel.
+    - 5 GHz: ``channel = (freq - 5000) / 5``; valid centers fall in
+      ``[5170, 5825]`` (channels 34–165).
+    - 6 GHz: channels 1, 5, 9, …, 233 at ``5955 + 5 * (n - 1)`` MHz.
+    """
+    # 2.4 GHz: channels 1-13 at 2412+5*(n-1) MHz; channel 14 alone at 2484.
+    if 2412 <= freq_mhz <= 2472 and (freq_mhz - 2412) % 5 == 0:
         return (freq_mhz - 2412) // 5 + 1
-    if 5170 <= freq_mhz <= 5825:
-        return (freq_mhz - 5170) // 5 + 34
-    if 5955 <= freq_mhz <= 7115:  # 6 GHz
+    if freq_mhz == 2484:
+        return 14
+    # 5 GHz: channel = (freq - 5000) / 5; valid in [5170, 5825].
+    if 5170 <= freq_mhz <= 5825 and (freq_mhz - 5000) % 5 == 0:
+        return (freq_mhz - 5000) // 5
+    # 6 GHz: channels 1, 5, 9, ..., 233 at 5955+5*(n-1) MHz.
+    if 5955 <= freq_mhz <= 7115 and (freq_mhz - 5955) % 5 == 0:
         return (freq_mhz - 5955) // 5 + 1
     return 0
 
 
 def freq_to_band(freq_mhz: int) -> str:
-    """Convert Wi-Fi frequency (MHz) to band name."""
+    """Convert Wi-Fi frequency (MHz) to band name.
+
+    Permissive by design: any frequency inside a band's overall envelope
+    returns the band string, even if it is not on the canonical
+    channel-center grid. Band classification is a coarser concept than
+    channel number — see :func:`freq_to_channel` for the strict mapping.
+    """
     if 2400 <= freq_mhz <= 2500:
         return "2.4GHz"
     if 5150 <= freq_mhz <= 5850:

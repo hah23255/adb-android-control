@@ -66,18 +66,48 @@ class TestFreqToChannelProperties:
         assert isinstance(result, int)
 
     @SHALLOW_FUZZ
-    @given(freq=st.integers(min_value=2412, max_value=2484))
-    def test_24ghz_band_returns_channel_1_to_14(self, freq: int) -> None:
-        # Property: in 2.4 GHz range, channel must be 1-14
+    @given(freq=st.integers(min_value=2400, max_value=2500))
+    def test_24ghz_alignment_invariant(self, freq: int) -> None:
+        # Property (issue #4): if the function returns a non-zero channel,
+        # the input MUST sit on the canonical 2.4 GHz channel-center grid.
+        # A range-only assertion (1 <= ch <= 14) hides 57 of 59 off-grid
+        # mis-mappings; alignment catches all of them.
         ch = freq_to_channel(freq)
-        assert 1 <= ch <= 14
+        if ch == 0:
+            return  # 0 = "unknown" — any input is allowed to map to 0
+        if ch == 14:
+            assert freq == 2484, f"ch=14 must come from freq=2484, got {freq}"
+        else:
+            assert 1 <= ch <= 13, f"2.4 GHz channel out of [1,13] ∪ {{14}}: {ch}"
+            assert freq == 2412 + (ch - 1) * 5, (
+                f"Off-grid 2.4 GHz: freq={freq} fabricated ch={ch}"
+            )
 
     @SHALLOW_FUZZ
-    @given(freq=st.integers(min_value=5170, max_value=5825))
-    def test_5ghz_band_yields_positive_channel(self, freq: int) -> None:
-        # Property: in 5 GHz range, channel must be >= 36 (lowest 5 GHz channel)
+    @given(freq=st.integers(min_value=5000, max_value=5900))
+    def test_5ghz_alignment_invariant(self, freq: int) -> None:
+        # Property (issue #4): 5 GHz channel n satisfies freq = 5000 + 5*n.
+        # Generator capped at 5900 to avoid overlap with the 6 GHz envelope
+        # (which begins at 5955); any freq above 5825 returns 0 anyway.
         ch = freq_to_channel(freq)
-        assert ch >= 34
+        if ch == 0:
+            return
+        assert freq == 5000 + ch * 5, (
+            f"Off-grid 5 GHz: freq={freq} fabricated ch={ch}"
+        )
+
+    @SHALLOW_FUZZ
+    @given(freq=st.integers(min_value=5900, max_value=7200))
+    def test_6ghz_alignment_invariant(self, freq: int) -> None:
+        # Property (issue #4): 6 GHz channel n satisfies freq = 5955 + 5*(n-1).
+        # Generator starts at 5900 to avoid overlap with the 5 GHz envelope
+        # (which ends at 5825); any freq below 5955 returns 0 anyway.
+        ch = freq_to_channel(freq)
+        if ch == 0:
+            return
+        assert freq == 5955 + (ch - 1) * 5, (
+            f"Off-grid 6 GHz: freq={freq} fabricated ch={ch}"
+        )
 
     @example(freq=-1)
     @example(freq=0)

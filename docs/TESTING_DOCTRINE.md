@@ -110,6 +110,31 @@ operations succeeded. Cron jobs, gitignore patterns, and async
 side-effects all benefit from explicit post-conditions verified
 against ground truth.
 
+### Range-only properties miss alignment bugs (issue #4, 2026-05-05)
+
+**Trigger:** `freq_to_channel` Hypothesis property
+`assert 1 <= ch <= 14` caught **2 of 59** in-band off-grid mis-mappings
+(detection rate **3.4 %**). The other 57 wrong outputs stayed inside
+`[1, 14]` and slipped through.
+
+**Insight:** For lookup-table-shaped functions (freq → channel,
+vid → vendor, currency code → name, etc.), a property of the form
+`assert lo <= f(x) <= hi` checks only that the output stays in its
+legal range — it is silent on whether the *right input* produced the
+*right output*. The stronger invariant asserts **structural
+alignment** between input and output: e.g. `if ch != 0: freq == 2412 +
+(ch - 1) * 5`. Cost is similar; detection on this bug class jumps from
+3.4 % to 100 %.
+
+**Pattern reinforced:** Property-based fuzzing (§ Advanced Patterns) +
+Adaptive Fault Tolerance — the alignment property captures the
+function's contract precisely, including the "0 means unknown"
+graceful-degradation clause.
+
+**Mitigation:** PR #9 replaces the two range-only 2.4 / 5 GHz
+properties with alignment-invariant ones, adds a previously-missing
+6 GHz alignment property, and lands the production fix.
+
 ### v1.0.0 PII leak (2026-05-05)
 
 The `.gitignore` had `.env` and `device_*.txt` patterns but
