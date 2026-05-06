@@ -78,7 +78,9 @@ class TestFreqToChannelProperties:
         if ch == 14:
             assert freq == 2484, f"ch=14 must come from freq=2484, got {freq}"
         else:
-            assert 1 <= ch <= 13, f"2.4 GHz channel out of [1,13] ∪ {{14}}: {ch}"
+            assert 1 <= ch <= 13, (
+                f"2.4 GHz channel out of [1,13] or {{14}}: {ch}"
+            )
             assert freq == 2412 + (ch - 1) * 5, (
                 f"Off-grid 2.4 GHz: freq={freq} fabricated ch={ch}"
             )

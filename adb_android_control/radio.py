@@ -48,12 +48,12 @@ def freq_to_channel(freq_mhz: int) -> int:
 
     Channel plans:
 
-    - 2.4 GHz: channels 1–13 at ``2412 + 5 * (n - 1)`` MHz; channel 14
-      alone at 2484 MHz. Frequencies 2473–2483 are the 12 MHz gap and
+    - 2.4 GHz: channels 1-13 at ``2412 + 5 * (n - 1)`` MHz; channel 14
+      alone at 2484 MHz. Frequencies 2473-2483 are the 12 MHz gap and
       have no channel.
     - 5 GHz: ``channel = (freq - 5000) / 5``; valid centers fall in
-      ``[5170, 5825]`` (channels 34–165).
-    - 6 GHz: channels 1, 5, 9, …, 233 at ``5955 + 5 * (n - 1)`` MHz.
+      ``[5170, 5825]`` (channels 34-165).
+    - 6 GHz: channels 1, 5, 9, ..., 233 at ``5955 + 5 * (n - 1)`` MHz.
     """
     # 2.4 GHz: channels 1-13 at 2412+5*(n-1) MHz; channel 14 alone at 2484.
     if 2412 <= freq_mhz <= 2472 and (freq_mhz - 2412) % 5 == 0:
