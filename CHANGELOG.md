@@ -7,34 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-05-06 — Correctness + CI restoration patch
+
+First post-GA patch release. Three landed PRs:
+
+- **#9** — `radio.freq_to_channel` off-grid alignment fix (closes #4)
+- **#10** — CI restoration (4 test failures fixed + 70 → 0 ruff errors,
+  ruff format applied)
+- **#11** — README refresh (stale numbers + project status)
+
 ### Fixed
 - `radio.freq_to_channel` no longer fabricates channel numbers for
   off-grid Wi-Fi frequencies. Previously, frequencies in the 2.4 GHz
-  gap band (2473–2483 MHz) and any non-5-MHz-aligned 5 GHz / 6 GHz
+  gap band (2473-2483 MHz) and any non-5-MHz-aligned 5 GHz / 6 GHz
   frequency would return invalid channel numbers (e.g. 13 from 2473,
   15 from 2483, 34 from 5171, 164 from 5824). They now correctly
   return `0` ("unknown"). The function validates input alignment to
   the canonical IEEE 802.11 channel-center grid in addition to the
-  per-band frequency range. Closes #4.
+  per-band frequency range. Closes #4. (#9)
+- `monitor.LogcatMonitor.parse_log_line` now accepts any uppercase
+  level letter, matching the documented contract for unknown levels.
+  (#10)
+- `monitor.PerformanceMonitor` CPU probe parser hardened against
+  ordering of `top -n 1` output lines. (#10)
+- `controller._run` argv mocking pattern documented; two error-class
+  tests (`test_device_offline_stderr_raises_device_offline_error`,
+  `test_device_unauthorized_also_raises_device_offline_error`)
+  realigned with the production "joined-form `shell <cmd>`" contract.
+  (#10)
 
 ### Changed
 - `radio.freq_to_channel` 5 GHz formula simplified from
   `(freq - 5170) // 5 + 34` to the algebraically equivalent
   `(freq - 5000) // 5`, matching the natural 802.11 channel
   convention (`channel = freq / 5 - 1000`) and making alignment
-  visible in the source.
+  visible in the source. (#9)
 - `radio.freq_to_band` docstring now documents that band
   classification is intentionally permissive (coarser than channel)
   and refers callers to `freq_to_channel` for the strict mapping.
+  (#9)
+- README: stale test count (273 → 338), test/code ratio
+  (1.56:1 → 1.59:1), CLI version example (`1.1.0-rc1` → `2.0.0`),
+  project-status table, and pre-GA blurbs corrected. (#11)
 
 ### Added
 - Alignment-invariant Hypothesis properties for all three Wi-Fi bands
   (`test_24ghz_alignment_invariant`, `test_5ghz_alignment_invariant`,
   `test_6ghz_alignment_invariant`). These replace range-only
   properties whose detection rate on this bug class was 3.4 %; the
-  new properties catch every off-grid mis-mapping (100 %).
+  new properties catch every off-grid mis-mapping (100 %). (#9)
 - Hand-written gap-band, off-grid, and band-boundary parametrised
-  tests in `tests/unit/test_radio.py::TestFrequencyToChannel`.
+  tests in `tests/unit/test_radio.py::TestFrequencyToChannel`. (#9)
+- Doctrine lesson "Range-only properties miss alignment bugs" added
+  to `docs/TESTING_DOCTRINE.md` § Lessons. (#9)
+- Investigation archive at
+  `memory/investigations/2026-05-05-freq-to-channel-rca/` documenting
+  the issue #4 RCA, expanded scope (60× original estimate), and
+  doctrine lesson candidates. (operator workspace, not in repo)
+
+### CI / quality housekeeping (#10)
+- Removed all 70 ruff errors on main: 4 introduced by #9 (3 en-dashes
+  + 1 mathematical UNION), 66 pre-existing (line-length, import
+  ordering, `S108` tmp-path warnings, unused-noqa, etc.).
+- Applied `ruff format` repo-wide (23 files reformatted).
+- Verified all 6 test-matrix combinations green (3.10 / 3.11 / 3.12 ×
+  ubuntu-latest / macos-latest).
+- Total tests: 338 (was 273 pre-#9).
 
 ## [2.0.0] — 2026-05-05 — Public GA 🚀
 
