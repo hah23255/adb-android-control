@@ -41,9 +41,7 @@ def main() -> None:
 
     if port:
         print(f"\n✓ ADB found at {ip}:{port}")
-        update_devices_file(
-            Path.home() / ".adb_devices", name="ZFOLD7", ip=ip, port=port
-        )
+        update_devices_file(Path.home() / ".adb_devices", name="ZFOLD7", ip=ip, port=port)
         save_last_port(Path.home() / ".adb_last_port", port)
         print(f"Config updated. Use: adb -s {ip}:{port} shell")
     else:

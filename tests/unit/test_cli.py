@@ -28,9 +28,7 @@ class TestArgparseLayout:
         parser = build_parser()
 
         # Assert — drill into the subparsers action to enumerate
-        sub_actions = [
-            a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
-        ]
+        sub_actions = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
         assert sub_actions, "Parser must have a subparsers action"
         choices = set(sub_actions[0].choices.keys())
         assert choices == {
@@ -45,9 +43,7 @@ class TestArgparseLayout:
             "scan-port",
         }
 
-    def test_version_flag_prints_package_version(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_version_flag_prints_package_version(self, capsys: pytest.CaptureFixture[str]) -> None:
         # Arrange + Act + Assert
         with pytest.raises(SystemExit) as excinfo:
             build_parser().parse_args(["--version"])
@@ -116,9 +112,7 @@ class TestArgparseLayout:
 
 
 class TestMainExitCodes:
-    def test_main_exits_with_subcommand_return_code(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_main_exits_with_subcommand_return_code(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange — install a fake subcommand handler
         from adb_android_control import cli
 
@@ -153,9 +147,7 @@ class TestMainExitCodes:
         captured = capsys.readouterr()
         assert "device offline" in captured.err
 
-    def test_main_exits_130_on_keyboard_interrupt(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_main_exits_130_on_keyboard_interrupt(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange — Ctrl-C semantics: exit 130 (128 + SIGINT)
         from adb_android_control import cli
 

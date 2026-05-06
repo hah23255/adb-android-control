@@ -68,11 +68,15 @@ def monitor_factory(
         wifi: dict[str, Any] | None = None,
         seed_state: ConnectionState | None = None,
     ) -> ConnectionMonitor:
-        wifi = wifi if wifi is not None else {
-            "ssid": "TestNet",
-            "rssi": -55,
-            "frequency_mhz": 5180,
-        }
+        wifi = (
+            wifi
+            if wifi is not None
+            else {
+                "ssid": "TestNet",
+                "rssi": -55,
+                "frequency_mhz": 5180,
+            }
+        )
         state_file = tmp_path / "state.json"
         if seed_state is not None:
             state_file.write_text(
@@ -159,11 +163,7 @@ class TestParseAdbDevices:
 
     def test_skips_offline_devices(self) -> None:
         # Arrange
-        output = (
-            "List of devices attached\n"
-            "10.0.0.1:5555\toffline\n"
-            "10.0.0.2:5555\tdevice\n"
-        )
+        output = "List of devices attached\n10.0.0.1:5555\toffline\n10.0.0.2:5555\tdevice\n"
 
         # Act
         result = parse_adb_devices(output)
@@ -351,9 +351,7 @@ class TestConnectionMonitorPersistence:
         assert mon.last_state.ip == "10.0.0.99"
         assert mon.last_state.port == 12345
 
-    def test_corrupt_state_file_yields_none(
-        self, tmp_path: Path, monitor_factory: Any
-    ) -> None:
+    def test_corrupt_state_file_yields_none(self, tmp_path: Path, monitor_factory: Any) -> None:
         # Arrange — write garbage that isn't JSON
         state_file = tmp_path / "state.json"
         state_file.write_text("not json", encoding="utf-8")
@@ -371,9 +369,7 @@ class TestConnectionMonitorPersistence:
         # Assert — internal lesson (adaptive fault tolerance): don't crash on bad state, start fresh
         assert mon.last_state is None
 
-    def test_save_state_round_trips(
-        self, tmp_path: Path, monitor_factory: Any
-    ) -> None:
+    def test_save_state_round_trips(self, tmp_path: Path, monitor_factory: Any) -> None:
         # Arrange
         mon = monitor_factory()
         state = _state(ip="10.5.5.5", port=6666)
@@ -388,9 +384,7 @@ class TestConnectionMonitorPersistence:
 
 
 class TestConnectionMonitorCheck:
-    def test_first_check_emits_connected_change_and_notifies(
-        self, monitor_factory: Any
-    ) -> None:
+    def test_first_check_emits_connected_change_and_notifies(self, monitor_factory: Any) -> None:
         # Arrange — no prior state, currently connected
         mon = monitor_factory(adb_status=(True, "10.0.0.1", 5555))
 
@@ -420,9 +414,7 @@ class TestConnectionMonitorCheck:
             for _title, msg in mon.notifier_calls  # type: ignore[attr-defined]
         )
 
-    def test_port_change_triggers_config_update(
-        self, tmp_path: Path, monitor_factory: Any
-    ) -> None:
+    def test_port_change_triggers_config_update(self, tmp_path: Path, monitor_factory: Any) -> None:
         # Arrange
         config = tmp_path / "devices"
         config.write_text("MYDEV=10.0.0.1:5555\n", encoding="utf-8")
@@ -452,9 +444,7 @@ class TestConnectionMonitorCheck:
 
 
 class TestConnectionMonitorConfigUpdate:
-    def test_no_op_when_config_file_missing(
-        self, tmp_path: Path, monitor_factory: Any
-    ) -> None:
+    def test_no_op_when_config_file_missing(self, tmp_path: Path, monitor_factory: Any) -> None:
         # Arrange
         mon = monitor_factory()
         mon.config_file = tmp_path / "doesnt_exist"
@@ -465,16 +455,11 @@ class TestConnectionMonitorConfigUpdate:
         # Assert — silently no-op
         assert not mon.config_file.exists()
 
-    def test_updates_only_matching_ip_lines(
-        self, tmp_path: Path, monitor_factory: Any
-    ) -> None:
+    def test_updates_only_matching_ip_lines(self, tmp_path: Path, monitor_factory: Any) -> None:
         # Arrange
         config = tmp_path / "devices"
         config.write_text(
-            "DEV1=10.0.0.1:5555\n"
-            "DEV2=10.0.0.2:5555\n"
-            "# comment line\n"
-            "DEV3=10.0.0.1:9999\n",
+            "DEV1=10.0.0.1:5555\nDEV2=10.0.0.2:5555\n# comment line\nDEV3=10.0.0.1:9999\n",
             encoding="utf-8",
         )
         mon = monitor_factory()

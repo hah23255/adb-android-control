@@ -431,9 +431,7 @@ class TestAppTester:
 
         # Assert
         assert result == {"duration_s": 10, "events": 50, "package": "com.foo"}
-        mock_controller.shell.assert_called_once_with(
-            "monkey -p com.foo --throttle 100 -v 50"
-        )
+        mock_controller.shell.assert_called_once_with("monkey -p com.foo --throttle 100 -v 50")
 
 
 # ---------------------------------------------------------------------------
@@ -451,9 +449,7 @@ class TestDeviceManager:
         mock_controller.shell.side_effect = lambda cmd: {
             "df -h /data | tail -1": "/data 50G 25G 25G 50% /data",
             "cat /proc/meminfo | head -3": (
-                "MemTotal: 8000000 kB\n"
-                "MemFree: 2000000 kB\n"
-                "MemAvailable: 4000000 kB"
+                "MemTotal: 8000000 kB\nMemFree: 2000000 kB\nMemAvailable: 4000000 kB"
             ),
         }[cmd]
         mgr = DeviceManager(adb=mock_controller)

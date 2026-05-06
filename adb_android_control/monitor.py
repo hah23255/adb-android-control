@@ -96,14 +96,14 @@ class CrashEvent:
 
 _LOGCAT_LINE_RE = re.compile(
     r"^(\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+)"  # timestamp
-    r"\s+(\d+)\s+(\d+)"                          # pid, tid
-    r"\s+([A-Z])"                                 # level — accept any uppercase
-    r"\s+([^:]+):"                                # tag    letter so non-standard
-    r"\s*(.*)$"                                   # message  letters (e.g. some
-)                                                 # vendor adb builds emit X)
-                                                  # are passed through rather
-                                                  # than dropped (Adaptive
-                                                  # Fault Tolerance pattern).
+    r"\s+(\d+)\s+(\d+)"  # pid, tid
+    r"\s+([A-Z])"  # level — accept any uppercase
+    r"\s+([^:]+):"  # tag    letter so non-standard
+    r"\s*(.*)$"  # message  letters (e.g. some
+)  # vendor adb builds emit X)
+# are passed through rather
+# than dropped (Adaptive
+# Fault Tolerance pattern).
 
 
 class LogcatMonitor:

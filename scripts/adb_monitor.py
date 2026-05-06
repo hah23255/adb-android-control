@@ -53,9 +53,7 @@ _RESET = "\033[0m"
 def print_log_entry(entry: LogEntry) -> None:
     """ANSI-coloured pretty-print of a :class:`LogEntry`."""
     color = _LEVEL_COLORS.get(entry.level, "")
-    print(
-        f"{color}[{entry.timestamp}] {entry.level[0]} {entry.tag}: {entry.message}{_RESET}"
-    )
+    print(f"{color}[{entry.timestamp}] {entry.level[0]} {entry.tag}: {entry.message}{_RESET}")
 
 
 def print_snapshot(snapshot: PerformanceSnapshot) -> None:
@@ -99,9 +97,7 @@ def main() -> None:
         print("Starting logcat monitor (Ctrl+C to stop)...")
         LogcatMonitor(args.serial).stream_logs(print_log_entry, filter_level=args.level)
     elif args.mode == "perf":
-        print(
-            f"Starting performance monitor (interval: {args.interval}s, Ctrl+C to stop)..."
-        )
+        print(f"Starting performance monitor (interval: {args.interval}s, Ctrl+C to stop)...")
         PerformanceMonitor(args.serial).start_monitoring(
             interval_s=args.interval, callback=print_snapshot
         )

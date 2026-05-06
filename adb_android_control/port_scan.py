@@ -100,13 +100,8 @@ class PortScanner:
         """Return the list of TCP ports in ``[start, end]`` accepting connections."""
         if start > end:
             return []
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self._max_workers
-        ) as executor:
-            futures = {
-                executor.submit(self._check_port, ip, p): p
-                for p in range(start, end + 1)
-            }
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+            futures = {executor.submit(self._check_port, ip, p): p for p in range(start, end + 1)}
             return sorted(
                 futures[future]
                 for future in concurrent.futures.as_completed(futures)

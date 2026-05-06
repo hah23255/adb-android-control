@@ -91,9 +91,7 @@ class PoisonPillADB:
         """Return the ordered argv tuples that were invoked during the test."""
         return list(self._call_log)
 
-    def __call__(
-        self, argv: list[str], *_args: object, **_kwargs: object
-    ) -> _MockResult:
+    def __call__(self, argv: list[str], *_args: object, **_kwargs: object) -> _MockResult:
         """Stand-in for ``subprocess.run``. Fails loud on unregistered argv."""
         key = tuple(argv)
         self._call_log.append(key)
@@ -116,9 +114,7 @@ def mock_adb(monkeypatch: pytest.MonkeyPatch) -> PoisonPillADB:
 
     pill = PoisonPillADB()
 
-    def _patched_run(
-        argv: list[str], *args: object, **kwargs: object
-    ) -> _MockResult:
+    def _patched_run(argv: list[str], *args: object, **kwargs: object) -> _MockResult:
         return pill(argv, *args, **kwargs)
 
     monkeypatch.setattr(subprocess, "run", _patched_run)
@@ -175,9 +171,7 @@ def fake_device_factory() -> Callable[..., FakeDevice]:
 # ---------------------------------------------------------------------------
 
 
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Skip integration/device tests by default. Run with -m integration to opt in."""
     if config.getoption("-m"):
         return

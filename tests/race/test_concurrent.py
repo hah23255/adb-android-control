@@ -79,9 +79,7 @@ class TestPortScanRaceConditions:
         result_holder: list[list[int]] = []
 
         def _scan() -> None:
-            result_holder.append(
-                scanner.find_open_ports("10.0.0.1", start=5555, end=5557)
-            )
+            result_holder.append(scanner.find_open_ports("10.0.0.1", start=5555, end=5557))
 
         scan_thread = threading.Thread(target=_scan)
         scan_thread.start()
@@ -195,9 +193,7 @@ class TestLogcatMonitorLifecycle:
 class TestConnectionMonitorTimeDeterminism:
     """The plan's §10: monitor's interval timing is deterministic under freezegun."""
 
-    def test_check_records_correct_iso_timestamp_under_freezegun(
-        self, tmp_path: Path
-    ) -> None:
+    def test_check_records_correct_iso_timestamp_under_freezegun(self, tmp_path: Path) -> None:
         # Arrange — fixed clock
         fixed = datetime(2026, 5, 5, 12, 0, 30, tzinfo=timezone.utc)
         mon = ConnectionMonitor(
@@ -260,20 +256,40 @@ class TestCrashRateOverFixedWindow:
         # Act — feed entries directly through the predicate
         entries = [
             LogEntry(
-                timestamp="01-01 00:00:00.001", pid=1, tid=2, level="INFO",
-                tag="A", message="boot", raw="",
+                timestamp="01-01 00:00:00.001",
+                pid=1,
+                tid=2,
+                level="INFO",
+                tag="A",
+                message="boot",
+                raw="",
             ),
             LogEntry(
-                timestamp="01-01 00:00:00.002", pid=1, tid=2, level="ERROR",
-                tag="A", message="crash detected", raw="",
+                timestamp="01-01 00:00:00.002",
+                pid=1,
+                tid=2,
+                level="ERROR",
+                tag="A",
+                message="crash detected",
+                raw="",
             ),
             LogEntry(
-                timestamp="01-01 00:00:00.003", pid=1, tid=2, level="ERROR",
-                tag="A", message="user click", raw="",
+                timestamp="01-01 00:00:00.003",
+                pid=1,
+                tid=2,
+                level="ERROR",
+                tag="A",
+                message="user click",
+                raw="",
             ),
             LogEntry(
-                timestamp="01-01 00:00:00.004", pid=1, tid=2, level="FATAL",
-                tag="A", message="fatal exception", raw="",
+                timestamp="01-01 00:00:00.004",
+                pid=1,
+                tid=2,
+                level="FATAL",
+                tag="A",
+                message="fatal exception",
+                raw="",
             ),
         ]
         # Manually invoke the same logic as CrashMonitor.start's callback
@@ -327,9 +343,7 @@ class TestConnectionMonitorConcurrency:
     future locking change can't silently break it.
     """
 
-    def test_concurrent_check_calls_serialize_via_filesystem(
-        self, tmp_path: Path
-    ) -> None:
+    def test_concurrent_check_calls_serialize_via_filesystem(self, tmp_path: Path) -> None:
         # Arrange — 4 monitors all writing to the same state file
         state_file = tmp_path / "state.json"
         # Each monitor reports a different connected port so we can tell
@@ -374,17 +388,11 @@ class TestOutOfOrderADBResponse:
     """ADBController invocations from concurrent threads must each see
     their own response (no cross-talk through any shared buffer)."""
 
-    def test_concurrent_shell_calls_each_get_their_own_result(
-        self, mock_adb: MagicMock
-    ) -> None:
+    def test_concurrent_shell_calls_each_get_their_own_result(self, mock_adb: MagicMock) -> None:
         # Arrange — register distinct responses for two distinct argvs
         mock_adb.register(["adb", "version"], stdout="v1\n")
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.product.model"], stdout="Pixel-A"
-        )
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.build.version.sdk"], stdout="36"
-        )
+        mock_adb.register(["adb", "shell", "getprop ro.product.model"], stdout="Pixel-A")
+        mock_adb.register(["adb", "shell", "getprop ro.build.version.sdk"], stdout="36")
         ctrl = ADBController()
         results: dict[str, str] = {}
 

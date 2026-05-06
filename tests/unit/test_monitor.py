@@ -295,9 +295,7 @@ class TestPerformanceMonitor:
         assert snap.timestamp.tzinfo is not None
         assert snap.timestamp == datetime(2026, 5, 5, tzinfo=timezone.utc)
 
-    def test_export_snapshots_writes_json_with_expected_shape(
-        self, tmp_path: Path
-    ) -> None:
+    def test_export_snapshots_writes_json_with_expected_shape(self, tmp_path: Path) -> None:
         # Arrange
         adb = _make_mock_controller()
         mon = PerformanceMonitor(adb=adb)
@@ -334,9 +332,7 @@ class TestPerformanceMonitor:
 class TestValueObjects:
     def test_log_entry_is_frozen(self) -> None:
         # Arrange
-        entry = LogEntry(
-            timestamp="t", pid=1, tid=2, level="INFO", tag="T", message="m", raw="r"
-        )
+        entry = LogEntry(timestamp="t", pid=1, tid=2, level="INFO", tag="T", message="m", raw="r")
 
         # Act + Assert — Doctrine Law 5: shared fixtures must be immutable
         with pytest.raises(Exception):  # noqa: B017 — FrozenInstanceError or AttributeError depending on python

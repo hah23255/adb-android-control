@@ -153,9 +153,7 @@ _BT_STATE_RE = re.compile(r"state:\s*(\w+)")
 _BT_NAME_RE = re.compile(r"name:\s*(.+)")
 _BT_ADDR_RE = re.compile(r"address:\s*([0-9A-Fa-f:X]+)")
 _BT_DEVICE_RE = re.compile(r"([0-9A-Fa-f:]{17})\s*(\S+)?")
-_LINK_STATS_RE = re.compile(
-    r"tx=([0-9.]+),\s*([0-9.]+),\s*([0-9.]+)\s+rx=([0-9.]+)"
-)
+_LINK_STATS_RE = re.compile(r"tx=([0-9.]+),\s*([0-9.]+),\s*([0-9.]+)\s+rx=([0-9.]+)")
 
 
 # ---------------------------------------------------------------------------
@@ -293,9 +291,7 @@ class RadioScanner:
     def get_wifi(self) -> WiFiInfo | None:
         """Read the current Wi-Fi connection via ADB ``dumpsys wifi``."""
         try:
-            output = self.adb.shell(
-                "dumpsys wifi | grep -E 'mWifiInfo|score=' | head -5"
-            )
+            output = self.adb.shell("dumpsys wifi | grep -E 'mWifiInfo|score=' | head -5")
         except Exception as exc:  # noqa: BLE001 — internal lesson (adaptive fault tolerance)
             logger.debug("get_wifi failed: %s", exc)
             return None
@@ -313,9 +309,7 @@ class RadioScanner:
     def get_link_stats(self) -> dict[str, float]:
         """Pull tx/rx link-layer statistics from ``dumpsys wifi``."""
         try:
-            output = self.adb.shell(
-                "dumpsys wifi | grep -E 'tx=|rx=|bcn=' | head -5"
-            )
+            output = self.adb.shell("dumpsys wifi | grep -E 'tx=|rx=|bcn=' | head -5")
         except Exception as exc:  # noqa: BLE001
             logger.debug("get_link_stats failed: %s", exc)
             return {}
@@ -335,9 +329,7 @@ class RadioScanner:
     def get_bluetooth_devices(self) -> list[dict[str, str]]:
         """Pull connected Bluetooth devices via ``dumpsys bluetooth_manager``."""
         try:
-            output = self.adb.shell(
-                "dumpsys bluetooth_manager | grep -A2 'Connected devices'"
-            )
+            output = self.adb.shell("dumpsys bluetooth_manager | grep -A2 'Connected devices'")
         except Exception as exc:  # noqa: BLE001
             logger.debug("get_bluetooth_devices failed: %s", exc)
             return []
@@ -355,18 +347,14 @@ class RadioScanner:
             features_output = ""
 
         try:
-            channels_output = self.adb.shell(
-                "dumpsys wifi | grep -i 'SupportedChannelList'"
-            )
+            channels_output = self.adb.shell("dumpsys wifi | grep -i 'SupportedChannelList'")
         except Exception:  # noqa: BLE001
             channels_output = ""
 
         features = re.findall(r"WIFI_FEATURE_(\w+)", features_output)
         result: dict[str, Any] = {
             "features": features,
-            "mimo_likely": any(
-                marker in features_output for marker in ("866", "1200", "2400")
-            ),
+            "mimo_likely": any(marker in features_output for marker in ("866", "1200", "2400")),
             "channels_24ghz": "",
             "channels_5ghz": "",
             "channels_6ghz": "",

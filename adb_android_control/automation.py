@@ -135,8 +135,10 @@ class ADBAutomation:
     def _do_swipe_left(self, _params: dict[str, Any]) -> StepOutcome:
         mid_y = self.screen_height // 2
         self.adb.swipe(
-            int(self.screen_width * 0.8), mid_y,
-            int(self.screen_width * 0.2), mid_y,
+            int(self.screen_width * 0.8),
+            mid_y,
+            int(self.screen_width * 0.2),
+            mid_y,
             duration_ms=200,
         )
         return StepOutcome(success=True)
@@ -144,8 +146,10 @@ class ADBAutomation:
     def _do_swipe_right(self, _params: dict[str, Any]) -> StepOutcome:
         mid_y = self.screen_height // 2
         self.adb.swipe(
-            int(self.screen_width * 0.2), mid_y,
-            int(self.screen_width * 0.8), mid_y,
+            int(self.screen_width * 0.2),
+            mid_y,
+            int(self.screen_width * 0.8),
+            mid_y,
             duration_ms=200,
         )
         return StepOutcome(success=True)
@@ -372,9 +376,7 @@ class AppTester(ADBAutomation):
         steps: list[AutomationStep] = [
             AutomationStep("start_app", {"package": package}, description="Launch app"),
             AutomationStep("wait", {"seconds": 3}, description="Wait for load"),
-            AutomationStep(
-                "screenshot", {"path": "nav_start.png"}, description="Initial state"
-            ),
+            AutomationStep("screenshot", {"path": "nav_start.png"}, description="Initial state"),
         ]
         for i in range(num_actions):
             kind = i % 3
@@ -533,9 +535,7 @@ class ScreenRecorder:
             logger.warning("Already recording")
             return
         remote_path = f"/sdcard/{filename}"
-        self.adb.screen_record(
-            remote_path, time_limit_s=time_limit_s, bit_rate_bps=bit_rate_bps
-        )
+        self.adb.screen_record(remote_path, time_limit_s=time_limit_s, bit_rate_bps=bit_rate_bps)
         self.recording = True
         logger.info("Recording started: %s", remote_path)
 

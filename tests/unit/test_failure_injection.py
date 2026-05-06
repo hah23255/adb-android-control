@@ -89,9 +89,7 @@ class TestControllerExitCodeClassification:
         assert not isinstance(excinfo.value, DeviceOfflineError)
         assert not isinstance(excinfo.value, ADBPermissionError)
 
-    def test_exit_137_oom_killed_raises_generic_adb_error(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_exit_137_oom_killed_raises_generic_adb_error(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — exit 137 = 128 + SIGKILL (e.g. OOM killer)
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(
@@ -173,27 +171,19 @@ class TestControllerExitCodeClassification:
 
 
 class TestControllerOutputCorruption:
-    def test_unparseable_sdk_version_raises_adb_error(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_unparseable_sdk_version_raises_adb_error(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — every getprop returns OK except the SDK one
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(["adb", "shell", "getprop ro.product.model"], stdout="X")
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.build.version.release"], stdout="14"
-        )
-        mock_adb.register(
-            ["adb", "shell", "getprop ro.build.version.sdk"], stdout="not-a-number"
-        )
+        mock_adb.register(["adb", "shell", "getprop ro.build.version.release"], stdout="14")
+        mock_adb.register(["adb", "shell", "getprop ro.build.version.sdk"], stdout="not-a-number")
         ctrl = ADBController()
 
         # Act + Assert
         with pytest.raises(ADBError, match="Unparseable SDK"):
             ctrl.get_device_info()
 
-    def test_garbled_screen_size_returns_zero_zero_not_crash(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_garbled_screen_size_returns_zero_zero_not_crash(self, mock_adb: PoisonPillADB) -> None:
         # Arrange — `wm size` returns nonsense
         mock_adb.register(["adb", "version"], stdout="v1\n")
         mock_adb.register(["adb", "shell", "wm size"], stdout="???")
@@ -205,14 +195,10 @@ class TestControllerOutputCorruption:
         # Assert — degraded, not crashed (internal lesson (adaptive fault tolerance))
         assert size == (0, 0)
 
-    def test_empty_battery_output_returns_zero(
-        self, mock_adb: PoisonPillADB
-    ) -> None:
+    def test_empty_battery_output_returns_zero(self, mock_adb: PoisonPillADB) -> None:
         # Arrange
         mock_adb.register(["adb", "version"], stdout="v1\n")
-        mock_adb.register(
-            ["adb", "shell", "dumpsys battery | grep level"], stdout=""
-        )
+        mock_adb.register(["adb", "shell", "dumpsys battery | grep level"], stdout="")
         ctrl = ADBController()
 
         # Act + Assert
@@ -306,9 +292,7 @@ class TestPortScannerOSErrors:
 
 
 class TestUSBFDFailures:
-    def test_identify_via_fd_returns_none_for_bad_fd(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_identify_via_fd_returns_none_for_bad_fd(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Arrange — os.read on a bad fd raises OSError
         import os
 
@@ -348,9 +332,7 @@ class TestExceptionHierarchyContract:
         "exc_cls",
         [ADBNotFoundError, DeviceOfflineError, ADBTimeoutError, ADBPermissionError],
     )
-    def test_subclass_caught_by_base_handler(
-        self, exc_cls: type[Exception]
-    ) -> None:
+    def test_subclass_caught_by_base_handler(self, exc_cls: type[Exception]) -> None:
         # Arrange + Act
         try:
             raise exc_cls("test")

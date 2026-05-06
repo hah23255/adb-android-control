@@ -28,40 +28,40 @@ logger = logging.getLogger(__name__)
 
 
 USB_VENDORS: dict[int, str] = {
-    0x04e8: "Samsung",
-    0x05ac: "Apple",
+    0x04E8: "Samsung",
+    0x05AC: "Apple",
     0x0483: "STMicroelectronics",
-    0x067b: "Prolific",
+    0x067B: "Prolific",
     0x0781: "SanDisk",
-    0x0bb4: "HTC",
-    0x0bda: "Realtek",
-    0x0fce: "Sony",
+    0x0BB4: "HTC",
+    0x0BDA: "Realtek",
+    0x0FCE: "Sony",
     0x1004: "LG",
-    0x10c4: "Silicon Labs",
-    0x12d1: "Huawei",
-    0x18d1: "Google",
-    0x19d2: "ZTE",
-    0x1a40: "Terminus Hub",
-    0x1a86: "QinHeng (CH340)",
-    0x1d6b: "Linux Foundation",
-    0x1f3a: "Allwinner",
+    0x10C4: "Silicon Labs",
+    0x12D1: "Huawei",
+    0x18D1: "Google",
+    0x19D2: "ZTE",
+    0x1A40: "Terminus Hub",
+    0x1A86: "QinHeng (CH340)",
+    0x1D6B: "Linux Foundation",
+    0x1F3A: "Allwinner",
     0x2109: "VIA Hub",
-    0x22b8: "Motorola",
+    0x22B8: "Motorola",
     0x2717: "Xiaomi",
-    0x2a70: "OnePlus",
-    0x2e8a: "Raspberry Pi",
+    0x2A70: "OnePlus",
+    0x2E8A: "Raspberry Pi",
     0x8087: "Intel",
 }
 
 USB_KNOWN_DEVICES: dict[tuple[int, int], str] = {
-    (0x04e8, 0x6860): "Samsung Galaxy (MTP)",
-    (0x04e8, 0x6861): "Samsung Galaxy (PTP)",
-    (0x04e8, 0x6862): "Samsung Galaxy (RNDIS)",
-    (0x18d1, 0x4ee1): "Google Pixel (MTP)",
-    (0x18d1, 0x4ee2): "Google Pixel (PTP)",
-    (0x22b8, 0x2e82): "Motorola (MTP)",
-    (0x2717, 0xff40): "Xiaomi (MTP)",
-    (0x2a70, 0x9024): "OnePlus (MTP)",
+    (0x04E8, 0x6860): "Samsung Galaxy (MTP)",
+    (0x04E8, 0x6861): "Samsung Galaxy (PTP)",
+    (0x04E8, 0x6862): "Samsung Galaxy (RNDIS)",
+    (0x18D1, 0x4EE1): "Google Pixel (MTP)",
+    (0x18D1, 0x4EE2): "Google Pixel (PTP)",
+    (0x22B8, 0x2E82): "Motorola (MTP)",
+    (0x2717, 0xFF40): "Xiaomi (MTP)",
+    (0x2A70, 0x9024): "OnePlus (MTP)",
 }
 
 
@@ -155,9 +155,9 @@ def identify_via_ioctl(fd: int) -> USBDeviceInfo | None:
     try:
         data = ctypes.create_string_buffer(18)
         ctrl = _CtrlTransfer()
-        ctrl.bRequestType = 0x80   # USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE
-        ctrl.bRequest = 0x06       # USB_REQ_GET_DESCRIPTOR
-        ctrl.wValue = 0x0100       # USB_DT_DEVICE << 8
+        ctrl.bRequestType = 0x80  # USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE
+        ctrl.bRequest = 0x06  # USB_REQ_GET_DESCRIPTOR
+        ctrl.wValue = 0x0100  # USB_DT_DEVICE << 8
         ctrl.wIndex = 0
         ctrl.wLength = 18
         ctrl.timeout = 1000
