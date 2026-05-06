@@ -44,6 +44,6 @@ Enter
 Sleep 2.5s
 
 # ── epilogue ──────────────────────────────────────────────────────────
-Type "# 273 tests · 1.76:1 ratio · MIT"
+Type "# 338 tests · 1.59:1 ratio · MIT"
 Enter
 Sleep 2s

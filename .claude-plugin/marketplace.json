@@ -5,11 +5,11 @@
     "url": "https://github.com/hah23255/adb-android-control"
   },
   "metadata": {
-    "description": "Comprehensive Android device control via ADB \u2014 typed Python package + CLI + Claude Code skill, doctrine-tested with 273 tests",
-    "version": "2.0.0",
+    "description": "Comprehensive Android device control via ADB \u2014 typed Python package + CLI + Claude Code skill, doctrine-tested with 338 tests",
+    "version": "2.0.1",
     "license": "MIT",
     "created": "2025-12-25",
-    "updated": "2026-05-05"
+    "updated": "2026-05-06"
   },
   "plugins": [
     {
