@@ -157,6 +157,17 @@ To find the new pairing/connection ports:
   pairing code" (gives a new pair port + code) or read the connection
   port from the same screen.
 
+**On Termux / proot (running on the phone itself)**
+
+- Connect to the phone's **LAN IP** (its `wlan0` address), **not** `127.0.0.1`. Inside a
+  proot container the network namespace returns `ENOSYS` on a loopback `adb connect`
+  (`failed to connect ... Function not implemented`), so the loopback bridge never comes
+  up even though the port is open.
+- A loopback `adb connect` to a dead target can then loop forever: the adb server retries
+  the (unreachable) target every ~3 s, burning ~80 % of a CPU core indefinitely. Clear it
+  with `adb disconnect <target>`; if the server is wedged and ignores the disconnect, kill
+  the `adb -L tcp:5037 fork-server` PID — it respawns clean without the stale target.
+
 ---
 
 ## D. Device shows as `offline`
@@ -257,18 +268,33 @@ ctrl.screenshot("shot.png")  # returns True
 
 **Diagnosis**
 
-`exec-out` adds `\r\n` line endings on some devices, corrupting the
-PNG stream. `adb_android_control` uses `exec-out` (no shell-wrap) which
-is the correct path; but adb versions < 1.0.40 may still corrupt.
+Two known causes:
+
+1. `exec-out` adds `\r\n` line endings on some devices, corrupting the PNG stream.
+   `adb_android_control` uses `exec-out` (no shell-wrap), the correct path; adb
+   versions < 1.0.40 may still corrupt.
+2. **Multi-display devices (foldables such as the Z Fold7)** — `screencap` prints
+   `[Warning] Multiple displays were found...` to **stdout, ahead of the PNG**. Raw
+   `adb exec-out screencap -p > shot.png` therefore produces a file whose first ~350
+   bytes are warning text and which no viewer will open. Note `screencap -d 0` does not
+   help — foldables reject display id `0`.
+
+Confirm which one by inspecting the first bytes — a valid PNG starts with `89 50 4E 47`:
+
+```bash
+head -c 16 shot.png | xxd        # expect: 8950 4e47 0d0a 1a0a ...
+```
 
 **Fix**
 
-```bash
-# Verify adb version
-adb version
-# Upgrade if < 1.0.40
+`screenshot()` (v2.0.0+) locates the PNG signature and strips any preceding bytes, so the
+toolkit handles the multi-display banner automatically. If you are calling `adb` directly:
 
-# Workaround: use shell + base64
+```bash
+# Verify adb version (upgrade if < 1.0.40)
+adb version
+
+# Safe path that avoids the stdout banner entirely: capture on-device, then pull
 adb shell screencap -p /sdcard/shot.png
 adb pull /sdcard/shot.png ./shot.png
 adb shell rm /sdcard/shot.png

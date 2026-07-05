@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `docs/TROUBLESHOOTING.md` — Termux/proot LAN-vs-loopback (`ENOSYS`) guidance and
+  runaway reconnect-loop recovery (section C); expanded multi-display screenshot banner
+  diagnosis (section G).
+- `docs/ERROR_HANDLING.md` — **E060**: corrupt screenshot on multi-display devices, with
+  the PNG-signature check and the safe capture-then-pull path.
+
 ## [2.0.2] — 2026-07-05 — Packaging, foldable & version-metadata fixes
 
 ### Fixed
