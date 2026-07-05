@@ -470,3 +470,44 @@ class TestKeyEvents:
             "shell",
             f"input keyevent {expected_keycode}",
         ) in mock_adb.call_log()
+
+
+class TestScreenshot:
+    """screencap output handling, including multi-display warning banners."""
+
+    def test_screenshot_strips_multidisplay_warning_prefix(
+        self, mock_adb: PoisonPillADB, tmp_path: Path
+    ) -> None:
+        # Arrange — foldables print a banner to stdout ahead of the PNG bytes.
+        png_body = b"\x89PNG\r\n\x1a\n\x00\x01real-image-bytes"
+        banner = b"[Warning] Multiple displays were found...\n"
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        mock_adb.register(
+            ["adb", "exec-out", "screencap", "-p"],
+            stdout=banner + png_body,  # type: ignore[arg-type]
+        )
+        ctrl = ADBController()
+        out = tmp_path / "shot.png"
+
+        # Act
+        ok = ctrl.screenshot(out)
+
+        # Assert — banner stripped, file is a valid PNG.
+        assert ok is True
+        assert out.read_bytes() == png_body
+
+    def test_screenshot_fails_cleanly_when_no_png_present(
+        self, mock_adb: PoisonPillADB, tmp_path: Path
+    ) -> None:
+        # Arrange
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        mock_adb.register(
+            ["adb", "exec-out", "screencap", "-p"],
+            stdout=b"error: no image",  # type: ignore[arg-type]
+        )
+        ctrl = ADBController()
+        out = tmp_path / "shot.png"
+
+        # Act + Assert — no PNG signature => failure, nothing written.
+        assert ctrl.screenshot(out) is False
+        assert not out.exists()
