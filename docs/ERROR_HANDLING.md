@@ -9,8 +9,9 @@ Comprehensive guide to ADB errors, their causes, and solutions.
 3. [Permission Errors](#permission-errors)
 4. [File Operation Errors](#file-operation-errors)
 5. [Shell Command Errors](#shell-command-errors)
-6. [Performance Issues](#performance-issues)
-7. [Error Codes Reference](#error-codes-reference)
+6. [Media Capture Errors](#media-capture-errors)
+7. [Performance Issues](#performance-issues)
+8. [Error Codes Reference](#error-codes-reference)
 
 ---
 
@@ -477,6 +478,39 @@ adb shell pwd
 # Instead of: adb shell rm /sdcard/photos/*
 adb shell "cd /sdcard/photos && find . -type f -delete"
 ```
+
+---
+
+## Media Capture Errors
+
+### E060: Corrupt Screenshot on Multi-Display Devices
+
+```
+# ctrl.screenshot("shot.png") returns True, but the file won't open.
+# First bytes are text, e.g.:
+[Warning] Multiple displays were found, but no display id was specified! ...
+```
+
+**Cause**
+
+On foldables and other multi-display devices, `screencap` writes a warning banner to
+**stdout ahead of the PNG**, so the captured stream no longer begins with the PNG
+signature. `screencap -d 0` does not fix it — such devices reject display id `0`.
+
+**Handling**
+
+`ADBController.screenshot()` (v2.0.0+) searches for the PNG signature (`\x89PNG`) and
+strips any preceding bytes before writing; if no signature is present it logs an error and
+returns `False` (rather than writing a corrupt file). To detect this in your own code,
+check the file header:
+
+```python
+assert open("shot.png", "rb").read(8) == b"\x89PNG\r\n\x1a\n"
+```
+
+If you shell out to `adb` directly, prefer the capture-then-pull path
+(`adb shell screencap -p /sdcard/shot.png && adb pull ...`), which avoids the stdout banner
+entirely. See TROUBLESHOOTING.md → "G. Screenshot".
 
 ---
 
