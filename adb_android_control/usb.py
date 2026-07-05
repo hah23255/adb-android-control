@@ -126,9 +126,8 @@ def identify_via_fd(fd: int) -> USBDeviceInfo | None:
     return parse_device_descriptor(data)
 
 
-# USBDEVFS ioctl constants — Linux-specific.
+# USBDEVFS ioctl constant — Linux-specific.
 # Source: linux/usb/usbdevice_fs.h
-_USBDEVFS_CONNECTINFO = 0x5411
 _USBDEVFS_CONTROL = 0xC0185500
 
 

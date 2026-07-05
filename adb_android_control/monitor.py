@@ -231,6 +231,8 @@ class LogcatMonitor:
                     continue
                 callback(entry)
         except KeyboardInterrupt:
+            # Ctrl-C is the expected way to end a blocking stream; teardown
+            # happens in `finally`, so nothing to do here.
             pass
         finally:
             self.stop()
@@ -422,6 +424,8 @@ class EventMonitor:
                 else:
                     print(stripped)  # noqa: T201
         except KeyboardInterrupt:
+            # Ctrl-C is the expected way to end the capture loop; teardown
+            # happens in `finally`, so nothing to do here.
             pass
         finally:
             self.stop()
