@@ -99,11 +99,11 @@ def cmd_monitor(args: argparse.Namespace) -> int:
     )
 
     if args.mode == "logcat":
-        from scripts.adb_monitor import print_log_entry
+        from adb_android_control.cli_helpers import print_log_entry
 
         LogcatMonitor(args.serial).stream_logs(print_log_entry, filter_level=args.level)
     elif args.mode == "perf":
-        from scripts.adb_monitor import print_snapshot
+        from adb_android_control.cli_helpers import print_snapshot
 
         PerformanceMonitor(args.serial).start_monitoring(
             interval_s=args.interval, callback=print_snapshot
@@ -148,14 +148,13 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 
 def cmd_radio(args: argparse.Namespace) -> int:
-    # Reuse the print helpers in scripts/radio_scan.py — they're CLI-helpers
-    from adb_android_control.radio import RadioScanner
-    from scripts.radio_scan import (
+    from adb_android_control.cli_helpers import (
         print_bluetooth_status,
         print_radio_capabilities,
         print_wifi_scan,
         print_wifi_status,
     )
+    from adb_android_control.radio import RadioScanner
 
     scanner = RadioScanner(device_serial=args.serial)
     sections = args.sections or ["all"]
@@ -171,8 +170,8 @@ def cmd_radio(args: argparse.Namespace) -> int:
 
 
 def cmd_connection(args: argparse.Namespace) -> int:
+    from adb_android_control.cli_helpers import status as print_status
     from adb_android_control.connection_monitor import ConnectionMonitor
-    from scripts.connection_monitor import status as print_status
 
     mon = ConnectionMonitor()
     sub = args.subcommand or "status"

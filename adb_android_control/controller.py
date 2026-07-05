@@ -97,6 +97,12 @@ TRANSFER_TIMEOUT_S = 300
 _BATTERY_LEVEL_RE = re.compile(r"level:\s*(\d+)")
 _SCREEN_SIZE_RE = re.compile(r"(\d+)x(\d+)")
 
+# PNG magic number. On multi-display devices (e.g. foldables) `screencap -p`
+# prints a "[Warning] Multiple displays were found" banner to stdout ahead of
+# the image, so screenshot() locates this signature rather than trusting the
+# stream to start with it.
+_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
 
 class ADBController:
     """Thin, typed wrapper over the `adb` CLI for one target device.
@@ -398,7 +404,22 @@ class ADBController:
             logger.error("Screenshot failed (rc=%d): %s", result.returncode, result.stderr)
             return False
 
-        Path(local_path).write_bytes(result.stdout)
+        png = result.stdout
+        offset = png.find(_PNG_SIGNATURE)
+        if offset < 0:
+            logger.error(
+                "Screenshot produced no PNG data (%d bytes captured); stderr: %s",
+                len(png),
+                result.stderr,
+            )
+            return False
+        if offset > 0:
+            # Strip a device-emitted warning banner (multi-display foldables) so
+            # the written file is a valid PNG.
+            logger.warning("Stripped %d non-PNG byte(s) preceding the screencap image", offset)
+            png = png[offset:]
+
+        Path(local_path).write_bytes(png)
         return True
 
     def screen_record(

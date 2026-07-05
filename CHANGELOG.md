@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-07-05 — Packaging, foldable & version-metadata fixes
+
+### Fixed
+- **Packaging** — `cli.py` no longer imports from the non-packaged `scripts/`
+  directory. The CLI print helpers now live in a new `adb_android_control.cli_helpers`
+  module, so `adb-control monitor|radio|connection` work after `pip install` instead of
+  raising `ModuleNotFoundError`.
+- **Foldable screenshots** — `controller.screenshot()` strips the `[Warning] Multiple
+  displays were found` banner that `screencap` prints to stdout ahead of the PNG on
+  multi-display devices (e.g. Z Fold7), and fails cleanly when no PNG is present.
+- **Version metadata** — `adb_android_control/__init__.py` `__version__` is bumped to
+  match `pyproject.toml` and `VERSION` (v2.0.1 shipped with `__version__` still "2.0.0",
+  so `adb-control --version` misreported).
+
+### Added
+- `docs/DEPLOYMENT.md` — deployment guide with an agent-driven install flow and prompt.
+- `PITCH.md` — project executive summary.
+
 ## [2.0.1] — 2026-05-06 — Correctness + CI restoration patch
 
 First post-GA patch release. Three landed PRs:
