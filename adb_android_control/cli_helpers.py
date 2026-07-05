@@ -1,9 +1,8 @@
 """CLI print helpers used by the ``adb-control`` console script.
 
-These helpers intentionally live inside the package so the console script
-works after ``pip install`` even though ``scripts/`` is not packaged.
-Standalone scripts under ``scripts/`` re-export these names for backwards
-compatibility.
+These helpers live inside the package so the console script works after
+``pip install`` even though ``scripts/`` is not packaged. The standalone
+tools under ``scripts/`` keep their own equivalent helpers for direct use.
 """
 
 from __future__ import annotations

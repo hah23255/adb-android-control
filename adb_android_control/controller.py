@@ -400,8 +400,15 @@ class ADBController:
             logger.error("Screenshot timed out")
             return False
 
+        # stderr is bytes here (screencap output is binary, so text=True is not
+        # set); decode once for readable log messages.
+        raw_err = result.stderr
+        stderr = (
+            raw_err.decode("utf-8", "replace") if isinstance(raw_err, bytes) else raw_err
+        ).strip()
+
         if result.returncode != 0:
-            logger.error("Screenshot failed (rc=%d): %s", result.returncode, result.stderr)
+            logger.error("Screenshot failed (rc=%d): %s", result.returncode, stderr)
             return False
 
         png = result.stdout
@@ -410,7 +417,7 @@ class ADBController:
             logger.error(
                 "Screenshot produced no PNG data (%d bytes captured); stderr: %s",
                 len(png),
-                result.stderr,
+                stderr,
             )
             return False
         if offset > 0:

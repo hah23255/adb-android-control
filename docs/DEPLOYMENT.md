@@ -140,4 +140,4 @@ A good screenshot begins with the bytes `89 50 4E 47` (`\x89PNG`). See
 | `adb connect 127.0.0.1:<port>` → `failed ... Function not implemented` | Termux/proot network namespace returns `ENOSYS` on loopback connect | Connect to the phone's **LAN IP** (wlan0), not `127.0.0.1`. |
 | adb pegs a CPU core for hours | A stale reconnect target loops forever in proot | `adb disconnect <target>`; if the server is wedged, kill the `adb ... fork-server` PID — it respawns clean. |
 | Device shows `offline` after connect | Not paired / unauthorized (Android 11+) | Complete `adb pair` with the code; re-connect. |
-| Screenshot file corrupt on a foldable | Multi-display `screencap` prints a warning ahead of the PNG | Handled: `screenshot()` strips any pre-signature bytes (v2.0.0+). |
+| Screenshot file corrupt on a foldable | Multi-display `screencap` prints a warning ahead of the PNG | Handled: `screenshot()` strips any pre-signature bytes (v2.0.2+). |

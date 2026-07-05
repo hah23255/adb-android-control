@@ -10,7 +10,7 @@ Every "Android automation" tool on the market assumes a desktop driving a phone 
 USB. This one flips that: it runs **on the device**, talks to Android's own debug bridge
 over loopback Wi-Fi, and exposes the whole surface — apps, files, input, screen, radios,
 USB — as a clean CLI and a JSON workflow engine. That's a category most people don't even
-know is possible, and this project already has it working and packaged as a **v2.0.0 GA**
+know is possible, and this project already has it working and packaged as a **v2.0.2**
 release.
 
 ## What it actually does (9 CLI verbs, 22 workflow step-kinds)
