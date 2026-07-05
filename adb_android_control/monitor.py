@@ -251,6 +251,15 @@ _CPU_PCT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 _MEMINFO_KB_RE = re.compile(r"(\d+)")
 _DISK_PCT_RE = re.compile(r"(\d+)%")
 
+# Device shell commands issued by the performance probes. Kept as module-level
+# constants so tests reference the exact same string the production code sends
+# (a whitespace/quoting drift between the two silently sent every snapshot's
+# reading to the graceful-degradation 0.0 path — see issue #7).
+_CPU_PROBE_CMD = "top -n 1 -b | grep -E 'CPU|cpu' | head -1"
+_MEMORY_PROBE_CMD = "cat /proc/meminfo | head -3"
+_DISK_PROBE_CMD = "df /data | tail -1"
+_PROCESS_COUNT_PROBE_CMD = "ps -A | wc -l"
+
 
 class PerformanceMonitor:
     """Periodic device-performance snapshots.
@@ -297,7 +306,7 @@ class PerformanceMonitor:
 
     def _get_cpu_usage(self) -> float:
         try:
-            output = self.adb.shell("top -n 1 -b | grep -E 'CPU|cpu' | head -1")
+            output = self.adb.shell(_CPU_PROBE_CMD)
         except Exception:  # noqa: BLE001 — degraded path: any failure → 0
             return 0.0
         match = _CPU_PCT_RE.search(output)
@@ -305,7 +314,7 @@ class PerformanceMonitor:
 
     def _get_memory(self) -> dict[str, int]:
         try:
-            output = self.adb.shell("cat /proc/meminfo | head -3")
+            output = self.adb.shell(_MEMORY_PROBE_CMD)
         except Exception:  # noqa: BLE001
             return {"total": 0, "used": 0}
         total = used = 0
@@ -322,7 +331,7 @@ class PerformanceMonitor:
 
     def _get_disk_usage(self) -> float:
         try:
-            output = self.adb.shell("df /data | tail -1")
+            output = self.adb.shell(_DISK_PROBE_CMD)
         except Exception:  # noqa: BLE001
             return 0.0
         match = _DISK_PCT_RE.search(output)
@@ -330,7 +339,7 @@ class PerformanceMonitor:
 
     def _get_process_count(self) -> int:
         try:
-            output = self.adb.shell("ps -A | wc -l")
+            output = self.adb.shell(_PROCESS_COUNT_PROBE_CMD)
         except Exception:  # noqa: BLE001
             return 0
         try:

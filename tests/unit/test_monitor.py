@@ -28,6 +28,10 @@ from freezegun import freeze_time
 
 from adb_android_control.controller import ADBController, ADBError
 from adb_android_control.monitor import (
+    _CPU_PROBE_CMD,
+    _DISK_PROBE_CMD,
+    _MEMORY_PROBE_CMD,
+    _PROCESS_COUNT_PROBE_CMD,
     CrashEvent,
     CrashMonitor,
     LogcatMonitor,
@@ -211,14 +215,14 @@ class TestPerformanceMonitor:
         # Arrange
         adb = _make_mock_controller(
             **{
-                "top -n 1 -b | grep -E 'CPU|cpu' | head -1": "  user 23.5%  sys 5.0%",
-                "cat /proc/meminfo | head -3": (
+                _CPU_PROBE_CMD: "  user 23.5%  sys 5.0%",
+                _MEMORY_PROBE_CMD: (
                     "MemTotal:        8000000 kB\n"
                     "MemFree:         2000000 kB\n"
                     "MemAvailable:    4000000 kB"
                 ),
-                "df /data | tail -1": "/data 100G 50G 50G 50% /data",
-                "ps -A | wc -l": "247",
+                _DISK_PROBE_CMD: "/data 100G 50G 50G 50% /data",
+                _PROCESS_COUNT_PROBE_CMD: "247",
             }
         )
         mon = PerformanceMonitor(adb=adb)
@@ -247,9 +251,9 @@ class TestPerformanceMonitor:
         # Arrange — only register the queries that should succeed
         adb = _make_mock_controller(
             **{
-                "cat /proc/meminfo | head -3": "MemTotal: 8000000 kB",
-                "df /data | tail -1": "/data 50% /data",
-                "ps -A | wc -l": "100",
+                _MEMORY_PROBE_CMD: "MemTotal: 8000000 kB",
+                _DISK_PROBE_CMD: "/data 50% /data",
+                _PROCESS_COUNT_PROBE_CMD: "100",
                 # CPU query intentionally NOT registered → ADBError → 0.0
             }
         )
@@ -267,10 +271,10 @@ class TestPerformanceMonitor:
         # Arrange
         adb = _make_mock_controller(
             **{
-                "top -n 1 -b | grep -E 'CPU|cpu' | head -1": "0% idle",
-                "cat /proc/meminfo | head -3": "MemTotal: 8000000 kB",
-                "df /data | tail -1": "/data 0%",
-                "ps -A | wc -l": "garbage_not_an_int",  # parse failure
+                _CPU_PROBE_CMD: "0% idle",
+                _MEMORY_PROBE_CMD: "MemTotal: 8000000 kB",
+                _DISK_PROBE_CMD: "/data 0%",
+                _PROCESS_COUNT_PROBE_CMD: "garbage_not_an_int",  # parse failure
             }
         )
         mon = PerformanceMonitor(adb=adb)

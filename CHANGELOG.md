@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/ERROR_HANDLING.md` — **E060**: corrupt screenshot on multi-display devices, with
   the PNG-signature check and the safe capture-then-pull path.
 
+### Changed
+- `PerformanceMonitor` — the four device probe commands (`cpu`, `memory`, `disk`,
+  `process-count`) are now module-level constants (`_CPU_PROBE_CMD` &c.) shared by the
+  production code and its tests, so the two can no longer silently drift. Prevents the
+  regression class behind issue #7 (a fixture/production string mismatch that routed every
+  reading to the graceful-degradation `0.0` path). No runtime behavior change.
+
 ## [2.0.2] — 2026-07-05 — Packaging, foldable & version-metadata fixes
 
 ### Fixed
