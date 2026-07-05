@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Shell-injection hardening in `ADBController`** — caller-supplied identifiers
+  (package / activity / property / settings namespace+key / logcat tag) are now
+  validated against an allow-list (`_validate_identifier`, `^[A-Za-z0-9._/]+$`) and
+  raise `ValueError` before reaching the device shell; free-form path/value/text
+  arguments (`ls`, `mkdir`, `rm`, `screen_record`, `set_setting` value, `input_text`,
+  `logcat` tag) are `shlex.quote`-d. Previously these were interpolated raw, so a
+  crafted argument could execute arbitrary commands on the device. `input_text` also
+  replaces broken single-quote escaping with `shlex.quote`. Implements the allow-list
+  the v2.0 module security note had deferred. (Salvaged from a branch audit.)
+
 ### Added
 - `docs/TROUBLESHOOTING.md` — Termux/proot LAN-vs-loopback (`ENOSYS`) guidance and
   runaway reconnect-loop recovery (section C); expanded multi-display screenshot banner
