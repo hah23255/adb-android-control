@@ -9,18 +9,20 @@ Security note: shell-command-injection surface
 ----------------------------------------------
 Several methods (e.g. :meth:`ADBController.clear_data`, :meth:`force_stop`,
 :meth:`get_property`, :meth:`set_setting`) interpolate caller-supplied
-strings into shell commands that run on the *device*. If the caller passes
-attacker-controlled input here, the attacker can execute arbitrary shell
-commands on the connected device. Callers are responsible for validating
-package names, property keys, and similar identifiers before passing them
-in. A future version will tighten this with a typed `PackageName` newtype
-and an explicit allow-list regex (Phase 2 of the v2.0 roadmap).
+strings into shell commands that run on the *device*. To close that surface,
+identifier arguments (package/activity/property/settings keys, logcat tags)
+are validated against an allow-list (:func:`_validate_identifier` /
+``_IDENTIFIER_RE`` / ``_TAG_RE``) and raise :class:`ValueError` on anything
+containing a shell metacharacter; free-form path/value/text arguments are
+``shlex.quote``-d before interpolation. Both fail closed rather than passing
+unsafe input to the device shell.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+import shlex
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
@@ -102,6 +104,18 @@ _SCREEN_SIZE_RE = re.compile(r"(\d+)x(\d+)")
 # the image, so screenshot() locates this signature rather than trusting the
 # stream to start with it.
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+# Allow-list for Android identifiers (package / activity / property / settings
+# keys) interpolated into device-side shell commands. Fail closed: reject any
+# value containing a shell metacharacter before it can reach the device shell.
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._/]+$")
+_TAG_RE = re.compile(r"^[A-Za-z0-9._]+$")
+
+
+def _validate_identifier(value: str, name: str = "identifier") -> None:
+    """Raise :class:`ValueError` if ``value`` is not a safe Android identifier."""
+    if not _IDENTIFIER_RE.fullmatch(value):
+        raise ValueError(f"Invalid {name}: {value!r}")
 
 
 class ADBController:
@@ -323,7 +337,8 @@ class ADBController:
         return "success" in result.lower()
 
     def clear_data(self, package: str) -> bool:
-        """Clear app data. See module-level security note re: package validation."""
+        """Clear app data. Raises :class:`ValueError` for an unsafe package name."""
+        _validate_identifier(package, "package")
         try:
             result = self._shell(f"pm clear {package}")
         except ADBError:
@@ -331,15 +346,19 @@ class ADBController:
         return "success" in result.lower()
 
     def force_stop(self, package: str) -> None:
-        """Force-stop the given package. See module-level security note."""
+        """Force-stop the given package. Raises :class:`ValueError` for an unsafe name."""
+        _validate_identifier(package, "package")
         self._shell(f"am force-stop {package}")
 
     def start_activity(self, package: str, activity: str) -> None:
         """Start a specific activity by ``package/activity`` name."""
+        _validate_identifier(package, "package")
+        _validate_identifier(activity, "activity")
         self._shell(f"am start -n {package}/{activity}")
 
     def start_app(self, package: str) -> None:
         """Launch the LAUNCHER activity of a package."""
+        _validate_identifier(package, "package")
         self._shell(f"monkey -p {package} -c android.intent.category.LAUNCHER 1")
 
     def get_current_activity(self) -> str:
@@ -368,17 +387,17 @@ class ADBController:
 
     def ls(self, path: str = "/sdcard") -> list[str]:
         """List directory contents at ``path``."""
-        output = self._shell(f"ls -la {path}")
+        output = self._shell(f"ls -la {shlex.quote(path)}")
         return output.split("\n")
 
     def mkdir(self, path: str) -> None:
         """Create directory (and parents) at ``path``."""
-        self._shell(f"mkdir -p {path}")
+        self._shell(f"mkdir -p {shlex.quote(path)}")
 
     def rm(self, path: str, *, recursive: bool = False) -> None:
         """Remove a file (or directory if ``recursive=True``)."""
         cmd = "rm -rf" if recursive else "rm"
-        self._shell(f"{cmd} {path}")
+        self._shell(f"{cmd} {shlex.quote(path)}")
 
     # ---------------------------------------------------------- screen
 
@@ -440,12 +459,11 @@ class ADBController:
         argv: list[str] = ["adb"]
         if self.device_serial is not None:
             argv.extend(["-s", self.device_serial])
-        argv.extend(
-            [
-                "shell",
-                f"screenrecord --time-limit {time_limit_s} --bit-rate {bit_rate_bps} {remote_path}",
-            ]
+        record_cmd = (
+            f"screenrecord --time-limit {time_limit_s} "
+            f"--bit-rate {bit_rate_bps} {shlex.quote(remote_path)}"
         )
+        argv.extend(["shell", record_cmd])
         return subprocess.Popen(argv)
 
     def get_screen_size(self) -> tuple[int, int]:
@@ -471,13 +489,9 @@ class ADBController:
         self._shell(f"input swipe {x} {y} {x} {y} {duration_ms}")
 
     def input_text(self, text: str) -> None:
-        """Type literal text. Spaces become ``%s`` per ADB convention.
-
-        WARNING: This method is the canonical "Hypothesis target" for Phase 3 —
-        many edge cases (special chars, unicode, RTL) are not handled here.
-        """
-        escaped = text.replace(" ", "%s").replace("'", "\\'")
-        self._shell(f"input text '{escaped}'")
+        """Type literal text. The text is shell-quoted before being sent."""
+        escaped = shlex.quote(text)
+        self._shell(f"input text {escaped}")
 
     def key_event(self, keycode: int) -> None:
         """Send an Android keycode."""
@@ -531,14 +545,19 @@ class ADBController:
 
     def get_property(self, prop: str) -> str:
         """Return the value of an Android system property (`getprop`)."""
+        _validate_identifier(prop, "property")
         return self._shell(f"getprop {prop}")
 
     def set_setting(self, namespace: str, key: str, value: str) -> None:
         """Set a `Settings` value (e.g. ``set_setting("global", "airplane_mode_on", "1")``)."""
-        self._shell(f"settings put {namespace} {key} {value}")
+        _validate_identifier(namespace, "namespace")
+        _validate_identifier(key, "key")
+        self._shell(f"settings put {namespace} {key} {shlex.quote(value)}")
 
     def get_setting(self, namespace: str, key: str) -> str:
         """Get a `Settings` value."""
+        _validate_identifier(namespace, "namespace")
+        _validate_identifier(key, "key")
         return self._shell(f"settings get {namespace} {key}")
 
     # ---------------------------------------------------------- logcat
@@ -547,7 +566,9 @@ class ADBController:
         """Return the last ``lines`` of logcat, optionally filtered by tag."""
         cmd = "logcat -d"
         if filter_tag is not None:
-            cmd += f' -s "{filter_tag}:*"'
+            if not _TAG_RE.fullmatch(filter_tag):
+                raise ValueError(f"Invalid logcat tag: {filter_tag!r}")
+            cmd += f" -s {shlex.quote(f'{filter_tag}:*')}"
         cmd += f" | tail -n {lines}"
         return self._shell(cmd)
 

