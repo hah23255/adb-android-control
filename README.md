@@ -1,349 +1,290 @@
 # adb-android-control
 
-> *Comprehensive Android device control via ADB — for humans, agents, and CI.*
+> Control an Android phone from your computer — or from another phone — over USB or Wi-Fi, with a clean Python API and CLI.
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Doctrine](https://img.shields.io/badge/Master%20Tester%20Doctrine-1.0-purple.svg)](docs/TESTING_DOCTRINE.md)
-[![Tests](https://img.shields.io/badge/tests-338-brightgreen.svg)](tests/)
-[![Test ratio](https://img.shields.io/badge/test%2Fcode-1.59%3A1-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-349-brightgreen.svg)](tests/)
 [![Type check](https://img.shields.io/badge/mypy-strict-blue.svg)](pyproject.toml)
-[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-orange.svg)](.pre-commit-config.yaml)
 
-[English](#english) · [Български](#български)
+**Find this project:** `#adb` · `#android` · `#wireless-debugging` · `#termux` · `#automation` · `#python` · `#foldable` · `#zfold` · `#fold7` · `#samsung` · `#claude-code` · `#folding-phone` · `#phone-automation`
+
+**Languages:** [English](#what-it-does) · [Български](#какво-представлява)
 
 ---
 
-## English
+## What it does
 
-### What it is
-A typed Python package + CLI that wraps the standard `adb` binary with a clean, doctrine-tested API. Pairs with **Claude Code** as a marketplace skill, but works equally well as a plain Python library or shell tool. Version: `2.0.3`.
+`adb-android-control` wraps the standard Android `adb` tool in a simple, typed Python package and CLI. Works on:
 
-### 30-second pitch
+- **Linux, macOS** — your desktop
+- **Termux (Android)** — run it on the phone itself, no PC needed (works great on folding phones like the **Galaxy Z Fold**)
+
+Pairs with **Claude Code** as a skill, but works fine on its own.
+
+## Contents
+
+- [Install](#install)
+- [Quick start](#quick-start)
+  - [1. Connect a device](#1-connect-a-device)
+  - [2. Use the CLI](#2-use-the-cli)
+  - [3. Use the Python API](#3-use-the-python-api)
+  - [4. Run a workflow](#4-run-a-workflow)
+- [Commands](#commands)
+- [Auto-reconnect (Termux)](#auto-reconnect-termux)
+- [Troubleshooting](#troubleshooting)
+- [Why this exists](#why-this-exists)
+- [Development](#development)
+
+---
+
+## Install
+
 ```bash
-pip install adb-android-control
-adb-control devices
-adb-control info -s EMULATOR-1
-adb-control shot screen.png
-adb-control monitor logcat
-adb-control workflow ./my-test.json
-```
-
-Built around three principles:
-1. **Behavioural test contracts.** Every public method has a typed test exercising the failure mode it claims to handle. 338 tests today, 1.59 : 1 test/code ratio.
-2. **No hidden subprocess interleaving.** Every shell-out goes through `ADBController` (or one flagged streaming carve-out). No `shell=True` anywhere. Argv lists only.
-3. **Observable contracts.** Typed exceptions, frozen value objects, wire-format-stable enum values. If we change a public name, your tests will tell you.
-
-### Install
-
-#### As a Python package
-```bash
-# From source (PyPI publish pending)
-pip install -e ".[dev]"
-
-# Or just the runtime dependencies
+pip install adb-android-control        # once published to PyPI
+# or from this repo:
 pip install -e .
 ```
 
-#### As a Claude Code skill
+As a Claude Code skill:
+
 ```bash
 git clone https://github.com/hah23255/adb-android-control.git \
     ~/.claude/skills/adb-android-control
 claude /plugin marketplace add ~/.claude/skills/adb-android-control
 ```
 
-### Quickstart
+You also need `adb` itself (Android platform-tools). On Termux: `pkg install android-tools`.
 
-#### 1. Verify your `adb` is available
+---
+
+## Quick start
+
+### 1. Connect a device
+
+**USB:**
+
 ```bash
-adb version
+adb devices        # tap "Allow" on the phone when it asks
 ```
-If this fails, install Android platform-tools or `pkg install android-tools` on Termux.
 
-#### 2. Connect a device
+**Wi-Fi (Android 11+):**
 
-##### USB
 ```bash
-adb devices    # Authorize on the device when prompted
+adb pair    <phone-ip>:<pair-port>   <pair-code>
+adb connect <phone-ip>:<connect-port>
 ```
 
-##### Wireless (Android 11+)
+The pair code and ports come from *Developer options → Wireless debugging* on the phone.
+
+> The auto-reconnect service (below) finds the current Wi-Fi port automatically, so you never hardcode it.
+
+### 2. Use the CLI
+
 ```bash
-adb pair      <device-ip>:<pair-port>  <pair-code>
-adb connect   <device-ip>:<connect-port>
+adb-control devices                  # what's connected
+adb-control info                     # model, Android version, battery
+adb-control shot                     # take a screenshot
+adb-control monitor logcat -l W      # live log stream (W = warnings+)
+adb-control monitor crash            # watch for crashes
+adb-control radio                    # Wi-Fi + Bluetooth status
+adb-control health                   # device health check (JSON)
+adb-control workflow ./test.json     # run an automation script
+adb-control --version
 ```
-See `docs/SETUP.md` for screenshots of the device-side flow.
 
-#### 3. Use it
+### 3. Use the Python API
 
-##### Python
 ```python
-from adb_android_control import ADBController, DeviceOfflineError
+from adb_android_control import ADBController
 
-ctrl = ADBController()                          # raises ADBNotFoundError if adb missing
-print(ctrl.devices())                            # → list of dicts
-info = ctrl.get_device_info()                    # → DeviceInfo
+ctrl = ADBController()                        # raises ADBNotFoundError if adb is missing
+print(ctrl.devices())                         # list of connected devices
+info = ctrl.get_device_info()                 # model, version, battery
 print(f"{info.model} on Android {info.android_version}")
-ctrl.screenshot("/tmp/shot.png")
+ctrl.screenshot("screen.png")
+ctrl.tap(500, 800)                            # tap at coordinates
 ```
 
-##### CLI
-```bash
-adb-control devices                  # list connected devices
-adb-control info                     # JSON device snapshot
-adb-control shot                     # screenshot.png in $CWD
-adb-control monitor logcat -l W      # warning+ logcat stream
-adb-control monitor crash            # crash detector
-adb-control radio                    # WiFi + Bluetooth status
-adb-control workflow ./test.json     # run an automation workflow
-adb-control health                   # JSON health check
-adb-control --version                # 2.0.3
-```
+### 4. Run a workflow
 
-#### 4. Author a workflow
+Workflows are JSON files that run a sequence of actions:
+
 ```json
 {
   "steps": [
-    { "action": "wake",       "delay": 0.5 },
-    { "action": "home",       "delay": 0.5 },
     { "action": "start_app",  "params": {"package": "com.example.app"}, "delay": 3 },
     { "action": "tap_center", "delay": 1 },
-    { "action": "screenshot", "params": {"path": "after_tap.png"}, "delay": 0 }
+    { "action": "screenshot", "params": {"path": "after_tap.png"} }
   ]
 }
 ```
+
 ```bash
 adb-control workflow my-test.json
 ```
-22 step kinds available — see `adb_android_control/automation.py`.
 
-### Architecture Mapping
-```mermaid
-flowchart LR
-  CLI["adb-control<br/>(cli.py)"] --> Ctrl["ADBController<br/>(controller.py)"]
-  CLI --> Mon["LogcatMonitor<br/>PerformanceMonitor<br/>CrashMonitor"]
-  CLI --> Auto["ADBAutomation<br/>AppTester<br/>DeviceManager"]
-  CLI --> Radio["RadioScanner"]
-  CLI --> Conn["ConnectionMonitor"]
-  CLI --> Port["PortScanner"]
-  Mon --> Ctrl
-  Auto --> Ctrl
-  Radio --> Ctrl
-  Conn --> Ctrl
-  Ctrl -.subprocess.-> ADB["adb (CLI)"]
-  ADB -.TCP/USB.-> Device["Android device"]
-  style Ctrl fill:#0066cc,color:#fff
-  style CLI fill:#009933,color:#fff
-```
-The full architecture deep-dive lives at `docs/ARCHITECTURE.md`, including sequence + state-machine diagrams.
+22 step kinds are available (tap, swipe, type text, open apps, take screenshots, and more) — see `adb_android_control/automation.py`.
 
-### Why this exists
-Most Android automation libraries are either:
-- **Java/Kotlin** (e.g. libadb-android) — great for Android-app-internal usage, no help on the host.
-- **uiautomator2 / Appium** — focused on UI test automation; heavyweight install; not great for raw ADB control.
-- **Pure shell scripts** — fragile parsing; hard to test; brittle.
+---
 
-`adb-android-control` is the missing piece: **a typed, doctrine-tested Python wrapper** for everything `adb` can do, with sane error classification and zero hidden state.
+## Commands
 
-### Testing — the Master Tester Doctrine
-This project is governed by the **Master Tester Doctrine** (HH directive 2026-03-05). The 10 non-negotiable laws live at `docs/TESTING_DOCTRINE.md`. Highlights:
-
-| Law | Mechanism in this repo |
+| Command | What it does |
 |---|---|
-| 1. Never modify a test to fix CI | pre-commit + CI test-file-integrity gate (Phase 7) |
-| 6. Never mock subprocess directly | Poison-Pill `mock_adb` fixture in `tests/conftest.py` |
-| 7. Ban `as any` in tests | `mypy --strict` with `disallow_any_explicit = true` |
-| 8. Tests must be deterministic | `freezegun`, `_sleep`/`_now` indirection, no real timers |
+| `adb-control devices` | List connected devices |
+| `adb-control info` | Device details as JSON |
+| `adb-control shot` | Take a screenshot |
+| `adb-control monitor MODE` | Live logcat / performance / events / crash watch |
+| `adb-control radio` | Wi-Fi + Bluetooth status |
+| `adb-control workflow FILE` | Run a JSON workflow |
+| `adb-control health` | Device health check |
+| `adb-control connection [status\|check\|run]` | Connection monitor |
+| `adb-control scan-port IP` | Find the ADB port on a device |
+| `adb-control connect NAME [IP]` | Auto-discover and connect (see below) |
 
-#### Run the tests
+---
+
+## Auto-reconnect (Termux)
+
+On Termux, a small service keeps your device connected in the background:
+
+- `termux/setup.sh ZFOLD7 <phone-ip>` installs the service and a few shell helpers.
+- Devices are stored in `~/.adb_devices` as `NAME=IP` — **no port**. The port is re-discovered on every connect, so Wi-Fi port changes never break it.
+- Helpers: `adb-connect`, `adb-list`, `adb-add`, `adb-reconnect`.
+
 ```bash
-pytest                       # 338 tests; ~10-20K Hypothesis examples
-pytest -m unit               # unit only (default)
-pytest -m property           # property-based fuzzing
-pytest -m race               # threading + concurrency
+./termux/setup.sh ZFOLD7 192.168.0.50
+adb-connect
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Cause | Fix |
+|---|---|---|
+| `adb: command not found` | `adb` not installed | Termux: `pkg install android-tools`. Debian/Ubuntu: `sudo apt install adb`. macOS: `brew install --cask android-platform-tools` |
+| Device shows `offline` | Stale ADB state | `adb kill-server && adb start-server`; for Wi-Fi, toggle Wireless debugging off/on |
+| Device shows `unauthorized` | Host not trusted yet | Tap "Allow" on the phone; if no prompt: `rm ~/.android/adbkey* && adb kill-server && adb start-server` |
+| Screenshot is empty | Old `adb`, or a warning printed before the image | `screenshot()` strips foldable warnings automatically; upgrade `adb` to ≥ 1.0.40 |
+| Wi-Fi connection loops under proot | Connecting to `127.0.0.1` | Always use the phone's LAN IP (`wlan0`), never loopback |
+| `ADBTimeoutError` | A command took too long | Pass a longer timeout or restart the ADB server |
+
+---
+
+## Why this exists
+
+Most Android automation tools are either:
+
+- **Java/Kotlin libraries** — for building Android apps, not for controlling devices from a host
+- **UI-test frameworks** (Appium, uiautomator2) — heavyweight, focused on UI tests
+- **Bash scripts around adb** — fragile, hard to test
+
+This project is the simple middle ground: a typed Python wrapper around everything `adb` can do, with clear errors, no `shell=True`, and no hidden state.
+
+---
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest                       # 349 tests + property-based fuzzing
+pytest -m property           # property tests only
+pytest -m race               # concurrency tests
 pytest --cov                 # coverage report
 ```
 
-### Fault Handling Manual
-| Status / Error | Root Cause | Mitigation |
-| :--- | :--- | :--- |
-| `adb: command not found` | Android platform-tools or `adb` binary is missing from system `PATH`. | On Termux: `pkg install android-tools`. On Debian/Ubuntu: `sudo apt install adb`. On macOS: `brew install --cask android-platform-tools`. |
-| Device shows as `offline` | ADB server-side state is stale, or the device's ADB daemon crashed. | Restart ADB: `adb kill-server && adb start-server`. If wireless, toggle Wireless Debugging on the device. |
-| Device shows as `unauthorized` | The host key is not trusted by the device. | Authorize on the device screen. If no prompt, regenerate keys: `rm ~/.android/adbkey* && adb kill-server && adb start-server`. |
-| Screenshot has 0 bytes | ADB `exec-out` adds `\r\n` line endings (older adb versions), or foldable display warnings are injected. | `screenshot()` strips foldable warnings automatically. Upgrade `adb` if `< 1.0.40`, or fall back to capturing on-device (`screencap -p /sdcard/shot.png`) and pulling. |
-| Wireless ADB connection loops / high CPU | Connecting to localhost (`127.0.0.1`) under `proot` causes connection loops. | Never connect to loopback under `proot`. Use the phone's LAN IP (its `wlan0` address) for `adb connect`. |
-| `ADBTimeoutError` | Subprocess hung or took longer than 30s limit. | Increase per-call timeout in `ctrl._run(..., timeout=120)` or restart ADB server. |
-
-### Common Issues & Golden Rules
-* **Golden Rule 1: Master Tester Doctrine Alignment.** Never mock `subprocess` directly. Always use the poison-pill `mock_adb` fixture to guarantee no leakage of real commands in CI/local runs.
-* **Golden Rule 2: Explicit Subprocess Timeouts.** Never call `subprocess` without specifying a timeout to prevent hanging commands from blocking the runner indefinitely.
-* **Golden Rule 3: No `shell=True`.** All shell command arguments must be lists (`argv`) to safeguard against command injection.
-* **Golden Rule 4: Termux/proot LAN IP usage.** Under `proot` containers, always connect to the phone's LAN IP (`wlan0`) instead of `127.0.0.1` to prevent busy loops and high CPU usage.
+The project follows the **Master Tester Doctrine** — see `docs/TESTING_DOCTRINE.md`. In short: every public method has a test, tests never touch the real `subprocess` (a poison-pill `adb` fixture is used instead), and everything is deterministic.
 
 ---
 
 ## Български
 
 ### Какво представлява
-Типизиран Python пакет + CLI, който обвива стандартния `adb` двоичен файл с изчистен, тестван съгласно доктрината API. Свързва се с **Claude Code** като пазарно умение (marketplace skill), но работи еднакво добре и като обикновена Python библиотека или конзолен инструмент. Версия: `2.0.3`.
 
-### Представяне за 30 секунди
-```bash
-pip install adb-android-control
-adb-control devices
-adb-control info -s EMULATOR-1
-adb-control shot screen.png
-adb-control monitor logcat
-adb-control workflow ./my-test.json
-```
+`adb-android-control` обвива стандартния инструмент `adb` на Android в проста, типизирана Python библиотека и CLI. Работи на:
 
-Изграден около три принципа:
-1. **Поведенчески тестови договори.** Всеки публичен метод има тестов случай, който проверява режимите на грешка, с които той твърди, че се справя. 338 теста днес, 1.59 : 1 съотношение тест/код.
-2. **Без скрито преплитане на подпроцеси.** Всяко извикване на шел преминава през `ADBController` (с изключение на едно отбелязано стрийминг изключение). Без `shell=True` никъде. Само списъци с аргументи (argv).
-3. **Наблюдаеми договори.** Типизирани изключения, замразени обекти за стойност, стабилни по мрежов формат стойности на enums. При промяна на публично име, тестовете ще сигнализират.
+- **Linux, macOS** — на вашия компютър
+- **Termux (Android)** — директно на телефона, без компютър
+
+Съвместим е с **Claude Code** като умение (skill), но работи самостоятелно.
 
 ### Инсталация
 
-#### Като Python пакет
 ```bash
-# От източник (предстои публикуване в PyPI)
-pip install -e ".[dev]"
-
-# Или само зависимостите за стартиране
+pip install adb-android-control        # след публикуване в PyPI
+# или от това хранилище:
 pip install -e .
 ```
 
-#### Като Claude Code умение
+Като Claude Code умение:
+
 ```bash
 git clone https://github.com/hah23255/adb-android-control.git \
     ~/.claude/skills/adb-android-control
 claude /plugin marketplace add ~/.claude/skills/adb-android-control
 ```
 
+Трябва ви и самият `adb` (Android platform-tools). Под Termux: `pkg install android-tools`.
+
 ### Бърз старт
 
-#### 1. Проверете дали `adb` е наличен
-```bash
-adb version
-```
-Ако командата се провали, инсталирайте Android platform-tools или `pkg install android-tools` в Termux.
+**Свързване по USB:**
 
-#### 2. Свържете устройство
-
-##### През USB
 ```bash
-adb devices    # Оторизирайте на устройството при подкана
+adb devices        # натиснете "Allow" на телефона при подкана
 ```
 
-##### Безжично (Android 11+)
+**Безжично (Android 11+):**
+
 ```bash
-adb pair      <device-ip>:<pair-port>  <pair-code>
-adb connect   <device-ip>:<connect-port>
+adb pair    <ip-на-телефона>:<pair-port>   <pair-code>
+adb connect <ip-на-телефона>:<connect-port>
 ```
-Вижте `docs/SETUP.md` за екранни снимки на безжичния процес.
 
-#### 3. Употреба
+Кодът за двойка и портовете се намират в *Опции за разработчици → Безжично отстраняване на грешки* (Wireless debugging).
 
-##### Python
+**CLI:**
+
+```bash
+adb-control devices                  # какво е свързано
+adb-control info                     # модел, версия на Android, батерия
+adb-control shot                     # скрийншот
+adb-control monitor logcat -l W      # жив лог поток
+adb-control monitor crash            # следене за сривове
+adb-control radio                    # статус на Wi-Fi + Bluetooth
+adb-control workflow ./test.json     # автоматизационен процес
+```
+
+**Python API:**
+
 ```python
-from adb_android_control import ADBController, DeviceOfflineError
+from adb_android_control import ADBController
 
-ctrl = ADBController()                          # хвърля ADBNotFoundError ако adb липсва
-print(ctrl.devices())                            # → списък от речници
-info = ctrl.get_device_info()                    # → DeviceInfo
-print(f"{info.model} на Android {info.android_version}")
-ctrl.screenshot("/tmp/shot.png")
+ctrl = ADBController()
+print(ctrl.devices())
+info = ctrl.get_device_info()
+ctrl.screenshot("screen.png")
 ```
 
-##### CLI
+### Отстраняване на проблеми
+
+| Проблем | Причина | Решение |
+|---|---|---|
+| `adb: command not found` | `adb` не е инсталиран | Termux: `pkg install android-tools`. Debian/Ubuntu: `sudo apt install adb`. macOS: `brew install --cask android-platform-tools` |
+| Устройството е `offline` | Застояло ADB състояние | `adb kill-server && adb start-server`; при безжична връзка изключете/включете Wireless debugging |
+| Устройството е `unauthorized` | Хостът не е одобрен | Натиснете "Allow" на телефона; ако няма подкана: `rm ~/.android/adbkey* && adb kill-server && adb start-server` |
+| Празен скрийншот | Стар `adb` или предупреждение преди изображението | `screenshot()` премахва предупрежденията за сгъваеми дисплеи автоматично; обновете `adb` до ≥ 1.0.40 |
+| Безкраен цикъл под proot | Свързване към `127.0.0.1` | Винаги ползвайте LAN IP адреса на телефона (`wlan0`), не loopback |
+| `ADBTimeoutError` | Командата е отнела твърде дълго | Увеличете timeout или рестартирайте ADB сървъра |
+
+### Разработка
+
 ```bash
-adb-control devices                  # списък със свързани устройства
-adb-control info                     # JSON снимка на устройството
-adb-control shot                     # screenshot.png в текущата папка
-adb-control monitor logcat -l W      # logcat поток за предупреждения+
-adb-control monitor crash            # детектор на сривове
-adb-control radio                    # статус на WiFi + Bluetooth
-adb-control workflow ./test.json     # изпълнение на автоматизационен процес
-adb-control health                   # JSON здравен статус
-adb-control --version                # 2.0.3
+pip install -e ".[dev]"
+pytest                       # 349 теста + property-based fuzzing
+pytest --cov                 # отчет за покритие
 ```
 
-#### 4. Създаване на автоматизационен процес (workflow)
-```json
-{
-  "steps": [
-    { "action": "wake",       "delay": 0.5 },
-    { "action": "home",       "delay": 0.5 },
-    { "action": "start_app",  "params": {"package": "com.example.app"}, "delay": 3 },
-    { "action": "tap_center", "delay": 1 },
-    { "action": "screenshot", "params": {"path": "after_tap.png"}, "delay": 0 }
-  ]
-}
-```
-```bash
-adb-control workflow my-test.json
-```
-Налични са 22 вида стъпки — вижте `adb_android_control/automation.py`.
-
-### Архитектурно описание
-```mermaid
-flowchart LR
-  CLI["adb-control<br/>(cli.py)"] --> Ctrl["ADBController<br/>(controller.py)"]
-  CLI --> Mon["LogcatMonitor<br/>PerformanceMonitor<br/>CrashMonitor"]
-  CLI --> Auto["ADBAutomation<br/>AppTester<br/>DeviceManager"]
-  CLI --> Radio["RadioScanner"]
-  CLI --> Conn["ConnectionMonitor"]
-  CLI --> Port["PortScanner"]
-  Mon --> Ctrl
-  Auto --> Ctrl
-  Radio --> Ctrl
-  Conn --> Ctrl
-  Ctrl -.subprocess.-> ADB["adb (Интерфейс)"]
-  ADB -.TCP/USB.-> Device["Android устройство"]
-  style Ctrl fill:#0066cc,color:#fff
-  style CLI fill:#009933,color:#fff
-```
-Пълният архитектурен преглед е наличен в `docs/ARCHITECTURE.md`, включително диаграми на последователностите и крайните автомати.
-
-### Защо съществува
-Повечето библиотеки за автоматизация на Android са или:
-- **Java/Kotlin** (напр. libadb-android) — отлични за вътрешно ползване в приложения, но безполезни на хост машината.
-- **uiautomator2 / Appium** — фокусирани върху UI тестове; тежка инсталация; неподходящи за директен ADB контрол.
-- **Чисти shell скриптове** — крехко парсване на текст; трудни за тестване.
-
-`adb-android-control` е липсващото звено: **типизирана, тествана съгласно доктрината Python обвивка** за всичко, което `adb` може, със смислено класифициране на грешките и без скрито състояние.
-
-### Тестване — Доктрината на главния тестер
-Този проект се управлява от **Доктрината на главния тестер** (директива HH 2026-03-05). Десетте пределно ясни правила са описани в `docs/TESTING_DOCTRINE.md`. Основни акценти:
-
-| Правило | Механизъм в това хранилище |
-|---|---|
-| 1. Никога не променяйте тест за фиксиране на CI | pre-commit + CI защита на интегритета на тестовете |
-| 6. Никога не симулирайте подпроцеси директно | Фикстура с отровно хапче `mock_adb` в `tests/conftest.py` |
-| 7. Забрана на `as any` в тестовете | `mypy --strict` с изрична забрана за `any` |
-| 8. Тестовете трябва да са детерминистични | `freezegun`, индирекция на времето, без реални таймери |
-
-#### Стартиране на тестовете
-```bash
-pytest                       # 338 теста; ~10-20 хиляди Hypothesis примера
-pytest -m unit               # само единични тестове (по подразбиране)
-pytest -m property           # property-базиран фъзинг
-pytest -m race               # конкурентност и нишки
-pytest --cov                 # репорт за покритие
-```
-
-### Ръководство за отстраняване на неизправности
-| Статус / Грешка | Причина | Решение |
-| :--- | :--- | :--- |
-| `adb: command not found` | Пакетът `adb` липсва в системния път (`PATH`). | Под Termux: `pkg install android-tools`. Под Debian/Ubuntu: `sudo apt install adb`. Под macOS: `brew install --cask android-platform-tools`. |
-| Устройството е `offline` | Застаряло състояние на ADB сървъра или срив на ADB даемона на устройството. | Рестартирайте сървъра: `adb kill-server && adb start-server`. За безжична връзка: изключете и включете Wireless Debugging. |
-| Устройството е `unauthorized` | Ключът на хоста не е в списъка с доверени на устройството. | Потвърдете разрешението на екрана на устройството. При липса на промпт: `rm ~/.android/adbkey* && adb kill-server && adb start-server`. |
-| Скрийншот с размер 0 байта | Символи за край на ред `\r\n` при по-стари версии на adb, или съобщения за сгъваем дисплей. | `screenshot()` автоматично филтрира излишните байтове. Обновете `adb` до версия `>= 1.0.40` или правете скрийншот локално в устройството и го изтегляйте (`adb pull`). |
-| Безкраен цикъл при Wireless ADB под proot | Опит за свързване към localhost (`127.0.0.1`) в proot среда. | Свързвайте се към LAN IP адреса на телефона (адреса на `wlan0`), а не към `127.0.0.1`, за да избегнете натоварване на процесора. |
-| `ADBTimeoutError` | Процесът увисва или трае по-дълго от лимита от 30 секунди. | Увеличете времето за изчакване чрез `ctrl._run(..., timeout=120)` или рестартирайте ADB сървъра. |
-
-### Чести проблеми и Златни правила
-* **Златно правило 1: Доктрината на главния тестер.** Никога не симулирайте (mock) `subprocess` директно. Винаги използвайте фикстурата `mock_adb`, за да гарантирате, че реални ADB команди не изтичат по време на тестове.
-* **Златно правило 2: Изрични лимити за време.** Никога не извиквайте процеси без изрично време за изчакване (timeout), за да не се допуска увиснали процеси да блокират изпълнението.
-* **Златно правило 3: Без `shell=True`.** Всички параметри на команди трябва да се предават като списъци (`argv`), за да се избегнат уязвимости от инжектиране на команди.
-* **Златно правило 4: Използване на LAN IP под Termux/proot.** В `proot` среди винаги се свързвайте към LAN IP адреса на устройството (`wlan0`) вместо към `127.0.0.1`, за да предотвратите безкрайни цикли и високо натоварване на процесора.
+Проектът следва **Доктрината на главния тестер** — вижте `docs/TESTING_DOCTRINE.md`. Накратко: всеки публичен метод има тест, тестовете никога не докосват реалния `subprocess` (използва се специална `adb` фикстура), и всичко е детерминистично.
