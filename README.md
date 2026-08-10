@@ -22,6 +22,12 @@
 
 Pairs with **Claude Code** as a skill, but works fine on its own.
 
+## Codebase at a glance
+
+10 modules · 213 functions · 3,030 lines · every function ≤ 30 LOC · 312 tests
+
+![Codebase metrics](docs/codebase_metrics.png)
+
 ## Contents
 
 - [Install](#install)
