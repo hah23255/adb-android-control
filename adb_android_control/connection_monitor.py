@@ -24,8 +24,6 @@ logger = logging.getLogger(__name__)
 _sleep: Callable[[float], None] = time.sleep
 
 
-
-
 @dataclass(frozen=True)
 class ConnectionState:
     """ADB+Wi-Fi state at a moment in time."""
@@ -60,8 +58,6 @@ class Change:
 
 # RSSI delta (dB) above which a signal change is considered "significant"
 SIGNAL_CHANGE_DB_THRESHOLD = 10
-
-
 
 
 def detect_changes(
@@ -104,8 +100,6 @@ def detect_changes(
         )
 
     return changes
-
-
 
 
 def parse_adb_devices(output: str) -> tuple[bool, str, int]:
@@ -162,8 +156,6 @@ def fetch_wifi_info(timeout_s: int = 5) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-
-
 def termux_notifier(title: str, message: str) -> None:
     """Notify via ``termux-notification``; silent on failure."""
     with contextlib.suppress(FileNotFoundError, subprocess.TimeoutExpired):
@@ -184,8 +176,6 @@ def termux_notifier(title: str, message: str) -> None:
 
 def null_notifier(_title: str, _message: str) -> None:
     """No-op notifier for tests."""
-
-
 
 
 # Change kinds that should trigger a user-facing notification by default
@@ -221,7 +211,6 @@ class ConnectionMonitor:
         self.last_state: ConnectionState | None = None
         self._load_state()
 
-
     def _load_state(self) -> None:
         if not self.state_file.exists():
             self.last_state = None
@@ -245,7 +234,6 @@ class ConnectionMonitor:
         }
         self.state_file.write_text(json.dumps(payload), encoding="utf-8")
 
-
     def log(self, msg: str) -> None:
         """Log a timestamped line to file and stdout."""
         ts = self._now_fn().strftime("%Y-%m-%d %H:%M:%S")
@@ -254,7 +242,6 @@ class ConnectionMonitor:
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
         with self.log_file.open("a", encoding="utf-8") as f:
             f.write(line + "\n")
-
 
     def get_current_state(self) -> ConnectionState:
         """Compose the current state from probes."""
@@ -270,7 +257,6 @@ class ConnectionMonitor:
             frequency_mhz=int(wifi.get("frequency_mhz", 0)),
         )
 
-
     def update_config(self, ip: str, port: int) -> None:
         """Rewrite matching ``~/.adb_devices`` entries to the new port."""
         if not self.config_file.exists():
@@ -285,7 +271,6 @@ class ConnectionMonitor:
                     continue
             new_lines.append(line)
         self.config_file.write_text("\n".join(new_lines), encoding="utf-8")
-
 
     def check(self) -> list[Change]:
         """Probe, diff, react; return the changes."""

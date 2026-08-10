@@ -24,8 +24,6 @@ from adb_android_control.controller import ADBController
 logger = logging.getLogger(__name__)
 
 
-
-
 @dataclass(frozen=True)
 class LogEntry:
     """One parsed logcat line."""
@@ -60,8 +58,6 @@ class CrashEvent:
     tag: str
     message: str
     level: str
-
-
 
 
 _LOGCAT_LINE_RE = re.compile(
@@ -191,8 +187,6 @@ class LogcatMonitor:
             self.stop()
 
 
-
-
 # Accepts `80%user` and `user 23.5%` formats.
 _CPU_PCT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 _MEMINFO_KB_RE = re.compile(r"(\d+)")
@@ -232,7 +226,6 @@ class PerformanceMonitor:
         )
         self.snapshots.append(snapshot)
         return snapshot
-
 
     def _get_battery(self) -> int:
         return self.adb.get_battery_level()
@@ -279,7 +272,6 @@ class PerformanceMonitor:
             return int(output.strip())
         except ValueError:
             return 0
-
 
     def start_monitoring(
         self,

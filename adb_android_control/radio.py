@@ -14,8 +14,6 @@ from adb_android_control.controller import ADBController
 logger = logging.getLogger(__name__)
 
 
-
-
 def freq_to_channel(freq_mhz: int) -> int:
     """Convert Wi-Fi MHz to a channel number."""
     # 2.4 GHz: ch 1-13 at 2412+5n; ch 14 at 2484.
@@ -56,8 +54,6 @@ def rssi_to_quality(rssi_dbm: int) -> str:
     return "Poor"
 
 
-
-
 @dataclass(frozen=True)
 class WiFiInfo:
     """Current Wi-Fi connection snapshot."""
@@ -88,8 +84,6 @@ class BluetoothInfo:
     connected_devices: tuple[dict[str, str], ...] = field(default_factory=tuple)
 
 
-
-
 _WIFI_INFO_RE = re.compile(
     r"SSID:\s*\"([^\"]*)\".*?BSSID:\s*([0-9a-f:]+).*?RSSI:\s*(-?\d+).*?"
     r"Link speed:\s*(\d+).*?Tx Link speed:\s*(\d+).*?Rx Link speed:\s*(\d+).*?"
@@ -105,8 +99,6 @@ _BT_NAME_RE = re.compile(r"name:\s*(.+)")
 _BT_ADDR_RE = re.compile(r"address:\s*([0-9A-Fa-f:X]+)")
 _BT_DEVICE_RE = re.compile(r"([0-9A-Fa-f:]{17})\s*(\S+)?")
 _LINK_STATS_RE = re.compile(r"tx=([0-9.]+),\s*([0-9.]+),\s*([0-9.]+)\s+rx=([0-9.]+)")
-
-
 
 
 def parse_wifi_info(dumpsys_output: str) -> WiFiInfo | None:
@@ -188,8 +180,6 @@ def parse_link_stats(stats_output: str) -> dict[str, float]:
     }
 
 
-
-
 class RadioScanner:
     """Wi-Fi/BT/radio probes."""
 
@@ -200,7 +190,6 @@ class RadioScanner:
         adb: ADBController | None = None,
     ) -> None:
         self.adb: ADBController = adb if adb is not None else ADBController(device_serial)
-
 
     @staticmethod
     def get_wifi_via_termux() -> dict[str, Any] | None:
@@ -222,7 +211,6 @@ class RadioScanner:
         except json.JSONDecodeError:
             return None
         return data if isinstance(data, dict) else None
-
 
     def get_wifi(self) -> WiFiInfo | None:
         """Current Wi-Fi via ``dumpsys wifi``."""
@@ -251,7 +239,6 @@ class RadioScanner:
             return {}
         return parse_link_stats(output)
 
-
     def get_bluetooth(self) -> BluetoothInfo | None:
         """BT adapter state."""
         try:
@@ -269,7 +256,6 @@ class RadioScanner:
             logger.debug("get_bluetooth_devices failed: %s", exc)
             return []
         return parse_bluetooth_devices(output)
-
 
     def get_capabilities(self) -> dict[str, Any]:
         """Radio features and channels."""

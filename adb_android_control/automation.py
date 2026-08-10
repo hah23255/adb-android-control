@@ -24,8 +24,6 @@ _sleep: Callable[[float], None] = time.sleep
 _now: Callable[[], float] = time.monotonic
 
 
-
-
 @dataclass(frozen=True)
 class AutomationStep:
     """One step in a workflow."""
@@ -71,7 +69,6 @@ class ADBAutomation:
     ) -> None:
         self.adb: ADBController = adb if adb is not None else ADBController(device_serial)
         self.screen_width, self.screen_height = self.adb.get_screen_size()
-
 
     def _do_tap(self, params: dict[str, Any]) -> StepOutcome:
         x = int(params.get("x", self.screen_width // 2))
@@ -189,7 +186,6 @@ class ADBAutomation:
     def _do_shell(self, params: dict[str, Any]) -> StepOutcome:
         self.adb.shell(str(params.get("command", "")))
         return StepOutcome(success=True)
-
 
     @property
     def _handlers(self) -> dict[str, Callable[[dict[str, Any]], StepOutcome]]:

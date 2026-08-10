@@ -1,4 +1,5 @@
 """Android device control via ADB."""
+
 from __future__ import annotations
 
 from adb_android_control.controller import (

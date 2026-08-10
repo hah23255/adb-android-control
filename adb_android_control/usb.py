@@ -1,4 +1,5 @@
 """USB device identification."""
+
 from __future__ import annotations
 
 import ctypes
@@ -8,8 +9,6 @@ import os
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
-
-
 
 
 USB_VENDORS: dict[int, str] = {
@@ -50,8 +49,6 @@ USB_KNOWN_DEVICES: dict[tuple[int, int], str] = {
 }
 
 
-
-
 @dataclass(frozen=True)
 class USBDeviceInfo:
     """Identification from a USB descriptor."""
@@ -79,8 +76,6 @@ def parse_device_descriptor(data: bytes) -> USBDeviceInfo | None:
         vendor_name=USB_VENDORS.get(vid, "Unknown"),
         device_name=USB_KNOWN_DEVICES.get((vid, pid), f"Unknown (0x{vid:04x}:0x{pid:04x})"),
     )
-
-
 
 
 def identify_via_fd(fd: int) -> USBDeviceInfo | None:

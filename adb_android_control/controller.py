@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Typed exception hierarchy.
 
+
 class ADBError(Exception):
     """Base ADB failure."""
 
@@ -33,8 +34,6 @@ class ADBTimeoutError(ADBError):
 
 class ADBPermissionError(ADBError):
     """Permission denied by ADB."""
-
-
 
 
 class DeviceState(Enum):
@@ -57,7 +56,6 @@ class DeviceInfo:
     screen_size: tuple[int, int]
     battery_level: int
     state: DeviceState
-
 
 
 DEFAULT_TIMEOUT_S = 30
@@ -89,7 +87,6 @@ class ADBController:
     def __init__(self, device_serial: str | None = None) -> None:
         self.device_serial = device_serial
         self._verify_adb()
-
 
     def _verify_adb(self) -> None:
         """Verify ADB is on PATH and runnable."""
@@ -151,7 +148,6 @@ class ADBController:
         """Public counterpart to :meth:`_shell`."""
         return self._shell(cmd, timeout=timeout)
 
-
     def devices(self) -> list[dict[str, str]]:
         """List connected devices."""
         output = self._run(["devices", "-l"])
@@ -212,7 +208,6 @@ class ADBController:
             battery_level=battery,
             state=DeviceState.DEVICE,
         )
-
 
     def list_packages(self, *, third_party_only: bool = False) -> list[str]:
         """List installed packages."""
@@ -286,7 +281,6 @@ class ADBController:
         """Return the raw `mResumedActivity` line."""
         return self._shell("dumpsys activity activities | grep mResumedActivity")
 
-
     def push(self, local_path: str | Path, remote_path: str) -> bool:
         """Push a file or directory to the device."""
         try:
@@ -318,7 +312,6 @@ class ADBController:
         """Remove a file or directory."""
         cmd = "rm -rf" if recursive else "rm"
         self._shell(f"{cmd} {shlex.quote(path)}")
-
 
     def screenshot(self, local_path: str | Path = "screenshot.png") -> bool:
         """Capture the device screen."""
@@ -389,7 +382,6 @@ class ADBController:
             return (0, 0)
         return (int(match.group(1)), int(match.group(2)))
 
-
     def tap(self, x: int, y: int) -> None:
         """Tap at screen coordinates ``(x, y)``."""
         self._shell(f"input tap {x} {y}")
@@ -447,7 +439,6 @@ class ADBController:
         for _ in range(steps):
             self.swipe(w // 2, h * 3 // 4, w // 2, h // 4, duration_ms=200)
 
-
     def get_battery_level(self) -> int:
         """Return battery level (0-100)."""
         output = self._shell("dumpsys battery | grep level")
@@ -462,7 +453,7 @@ class ADBController:
         return self._shell(f"getprop {prop}")
 
     def set_setting(self, namespace: str, key: str, value: str) -> None:
-        '''Set a `Settings` value.'''
+        """Set a `Settings` value."""
         _validate_identifier(namespace, "namespace")
         _validate_identifier(key, "key")
         self._shell(f"settings put {namespace} {key} {shlex.quote(value)}")
@@ -472,7 +463,6 @@ class ADBController:
         _validate_identifier(namespace, "namespace")
         _validate_identifier(key, "key")
         return self._shell(f"settings get {namespace} {key}")
-
 
     def logcat(self, *, lines: int = 100, filter_tag: str | None = None) -> str:
         """Recent logcat lines, optionally filtered by tag."""
@@ -488,9 +478,8 @@ class ADBController:
         """Clear the logcat buffer."""
         self._shell("logcat -c")
 
-
     def reboot(self, mode: str | None = None) -> None:
-        '''Reboot the device (optionally into ``mode``).'''
+        """Reboot the device (optionally into ``mode``)."""
         cmd: list[str] = ["reboot"]
         if mode is not None:
             cmd.append(mode)
