@@ -104,12 +104,12 @@ adb-control --version
 ```python
 from adb_android_control import ADBController
 
-ctrl = ADBController()                        # raises ADBNotFoundError if adb is missing
-print(ctrl.devices())                         # list of connected devices
-info = ctrl.get_device_info()                 # model, version, battery
+ctrl = ADBController()  # raises ADBNotFoundError if adb is missing
+print(ctrl.devices())  # list of connected devices
+info = ctrl.get_device_info()  # model, version, battery
 print(f"{info.model} on Android {info.android_version}")
 ctrl.screenshot("screen.png")
-ctrl.tap(500, 800)                            # tap at coordinates
+ctrl.tap(500, 800)  # tap at coordinates
 ```
 
 ### 4. Run a workflow

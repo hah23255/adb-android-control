@@ -62,8 +62,8 @@ package at `adb_android_control/`. The old `scripts/*.py` are now
 ### What still works (no change needed)
 
 ```python
-from scripts.adb_controller import ADBController        # ⚠️ DeprecationWarning
-from scripts.adb_monitor    import LogcatMonitor        # ⚠️ DeprecationWarning
+from scripts.adb_controller import ADBController  # ⚠️ DeprecationWarning
+from scripts.adb_monitor import LogcatMonitor  # ⚠️ DeprecationWarning
 from scripts.adb_automation import ADBAutomation, AppTester  # ⚠️
 ```
 
@@ -74,13 +74,21 @@ be **removed entirely in v2.0**.
 
 ```python
 from adb_android_control import (
-    ADBController, ADBError, DeviceOfflineError, DeviceInfo,
+    ADBController,
+    ADBError,
+    DeviceOfflineError,
+    DeviceInfo,
 )
 from adb_android_control.monitor import (
-    LogcatMonitor, PerformanceMonitor, CrashMonitor,
+    LogcatMonitor,
+    PerformanceMonitor,
+    CrashMonitor,
 )
 from adb_android_control.automation import (
-    ADBAutomation, AppTester, DeviceManager, ScreenRecorder,
+    ADBAutomation,
+    AppTester,
+    DeviceManager,
+    ScreenRecorder,
 )
 from adb_android_control.radio import RadioScanner
 from adb_android_control.connection_monitor import ConnectionMonitor

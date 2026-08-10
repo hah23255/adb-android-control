@@ -418,6 +418,7 @@ ctrl._run(["shell", "dumpsys"], timeout=120)  # 2 min
 
 # Or restart adb if recurring
 import subprocess
+
 subprocess.run(["adb", "kill-server"])
 subprocess.run(["adb", "start-server"])
 ```

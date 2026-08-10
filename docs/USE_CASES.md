@@ -253,35 +253,39 @@ echo "Captured 10 pages to $OUTPUT_DIR"
 import subprocess
 import time
 
+
 def adb(cmd):
-    subprocess.run(['adb', 'shell'] + cmd.split(), check=True)
+    subprocess.run(["adb", "shell"] + cmd.split(), check=True)
+
 
 def tap(x, y):
-    adb(f'input tap {x} {y}')
+    adb(f"input tap {x} {y}")
     time.sleep(0.5)
+
 
 def swipe_up():
-    adb('input swipe 540 1500 540 500 300')
+    adb("input swipe 540 1500 540 500 300")
     time.sleep(0.5)
 
+
 def screenshot(name):
-    subprocess.run(['adb', 'exec-out', 'screencap', '-p'],
-                   stdout=open(f'{name}.png', 'wb'))
+    subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=open(f"{name}.png", "wb"))
+
 
 # Test flow
 print("Starting UI test...")
 
 # Step 1: Tap menu button
 tap(100, 150)
-screenshot('step1_menu')
+screenshot("step1_menu")
 
 # Step 2: Scroll down
 swipe_up()
-screenshot('step2_scrolled')
+screenshot("step2_scrolled")
 
 # Step 3: Tap settings
 tap(540, 800)
-screenshot('step3_settings')
+screenshot("step3_settings")
 
 print("Test complete!")
 ```
