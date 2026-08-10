@@ -1,6 +1,6 @@
 """Unit tests for :mod:`adb_android_control.port_scan`.
 
-Doctrine: AAA (Law 3); pure-function tests for ``rewrite_devices_config``;
+Doctrine: AAA (Law 3); pure-function tests for ``rewrite_device_line``;
 DI'd ``check_port_fn`` / ``adb_connect_fn`` for ``PortScanner`` (Laws 5/6).
 No real network, no real subprocess.
 """
@@ -14,9 +14,9 @@ import pytest
 from adb_android_control.port_scan import (
     PortScanner,
     read_last_port,
-    rewrite_devices_config,
+    rewrite_device_line,
     save_last_port,
-    update_devices_file,
+    update_device_entry,
 )
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ pytestmark = pytest.mark.unit
 
 
 # ---------------------------------------------------------------------------
-# rewrite_devices_config — pure
+# rewrite_device_line — pure
 # ---------------------------------------------------------------------------
 
 
@@ -36,7 +36,7 @@ class TestRewriteDevicesConfig:
         content = "ZFOLD7=10.0.0.1:5555\nOTHER=192.168.1.5:5555\n"
 
         # Act
-        result = rewrite_devices_config(content, name="ZFOLD7", ip="10.0.0.2", port=42891)
+        result = rewrite_device_line(content, name="ZFOLD7", ip="10.0.0.2", port=42891)
 
         # Assert
         assert "ZFOLD7=10.0.0.2:42891" in result
@@ -47,7 +47,7 @@ class TestRewriteDevicesConfig:
         content = "# my devices\nZFOLD7=10.0.0.1:5555\n# end\n"
 
         # Act
-        result = rewrite_devices_config(content, name="ZFOLD7", ip="10.0.0.1", port=9999)
+        result = rewrite_device_line(content, name="ZFOLD7", ip="10.0.0.1", port=9999)
 
         # Assert
         assert "# my devices" in result
@@ -59,42 +59,42 @@ class TestRewriteDevicesConfig:
         content = "OTHER=10.0.0.1:5555\n"
 
         # Act
-        result = rewrite_devices_config(content, name="ZFOLD7", ip="10.0.0.1", port=9999)
+        result = rewrite_device_line(content, name="ZFOLD7", ip="10.0.0.1", port=9999)
 
         # Assert — same content, just round-tripped through split/join
         assert result.strip() == content.strip()
 
     def test_empty_input_returns_empty(self) -> None:
         # Arrange + Act
-        result = rewrite_devices_config("", name="X", ip="y", port=1)
+        result = rewrite_device_line("", name="X", ip="y", port=1)
 
         # Assert
         assert result == ""
 
 
 # ---------------------------------------------------------------------------
-# update_devices_file / save_last_port / read_last_port
+# update_device_entry / save_last_port / read_last_port
 # ---------------------------------------------------------------------------
 
 
 class TestFilesystemHelpers:
-    def test_update_devices_file_no_op_when_missing(self, tmp_path: Path) -> None:
+    def test_update_device_entry_no_op_when_missing(self, tmp_path: Path) -> None:
         # Arrange
         config = tmp_path / "missing"
 
         # Act — must NOT raise
-        update_devices_file(config, name="X", ip="1.2.3.4", port=42)
+        update_device_entry(config, name="X", ip="1.2.3.4", port=42)
 
         # Assert
         assert not config.exists()
 
-    def test_update_devices_file_writes_back(self, tmp_path: Path) -> None:
+    def test_update_device_entry_writes_back(self, tmp_path: Path) -> None:
         # Arrange
         config = tmp_path / "devices"
         config.write_text("MYDEV=1.2.3.4:5555\n", encoding="utf-8")
 
         # Act
-        update_devices_file(config, name="MYDEV", ip="5.6.7.8", port=9999)
+        update_device_entry(config, name="MYDEV", ip="5.6.7.8", port=9999)
 
         # Assert
         assert "MYDEV=5.6.7.8:9999" in config.read_text(encoding="utf-8")

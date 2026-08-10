@@ -31,7 +31,7 @@ from adb_android_control.connection_monitor import (
 )
 from adb_android_control.controller import _BATTERY_LEVEL_RE, _SCREEN_SIZE_RE
 from adb_android_control.monitor import LogcatMonitor
-from adb_android_control.port_scan import rewrite_devices_config
+from adb_android_control.port_scan import rewrite_device_line
 from adb_android_control.radio import (
     freq_to_band,
     freq_to_channel,
@@ -368,7 +368,7 @@ class TestControllerRegexProperties:
 
 
 # ---------------------------------------------------------------------------
-# rewrite_devices_config — line preservation, idempotency
+# rewrite_device_line — line preservation, idempotency
 # ---------------------------------------------------------------------------
 
 
@@ -390,8 +390,8 @@ class TestRewriteDevicesConfigProperties:
     )
     def test_idempotent_rewrite(self, content: str, name: str, ip: str, port: int) -> None:
         # Property: rewriting twice with the same args yields the same result
-        first = rewrite_devices_config(content, name=name, ip=ip, port=port)
-        second = rewrite_devices_config(first, name=name, ip=ip, port=port)
+        first = rewrite_device_line(content, name=name, ip=ip, port=port)
+        second = rewrite_device_line(first, name=name, ip=ip, port=port)
         assert first == second
 
     @DEEP_FUZZ
@@ -403,7 +403,7 @@ class TestRewriteDevicesConfigProperties:
     )
     def test_line_count_preserved(self, content: str, name: str, ip: str, port: int) -> None:
         # Property: rewriting never adds/removes lines
-        rewritten = rewrite_devices_config(content, name=name, ip=ip, port=port)
+        rewritten = rewrite_device_line(content, name=name, ip=ip, port=port)
         assert len(content.split("\n")) == len(rewritten.split("\n"))
 
 

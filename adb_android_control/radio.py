@@ -257,20 +257,8 @@ class RadioScanner:
             return []
         return parse_bluetooth_devices(output)
 
-    def get_capabilities(self) -> dict[str, Any]:
-        """Radio features and channels."""
-        try:
-            features_output = self.adb.shell(
-                "dumpsys wifi | grep -i 'SupportedFeatures\\|MIMO\\|antenna\\|band' | head -10"
-            )
-        except Exception:  # noqa: BLE001
-            features_output = ""
-
-        try:
-            channels_output = self.adb.shell("dumpsys wifi | grep -i 'SupportedChannelList'")
-        except Exception:  # noqa: BLE001
-            channels_output = ""
-
+    def _wifi_capability_fields(self, features_output: str, channels_output: str) -> dict[str, Any]:
+        """Parse capability fields from dumpsys output."""
         features = re.findall(r"WIFI_FEATURE_(\w+)", features_output)
         result: dict[str, Any] = {
             "features": features,
@@ -289,3 +277,19 @@ class RadioScanner:
         if ch_6:
             result["channels_6ghz"] = ch_6.group(1)
         return result
+
+    def get_capabilities(self) -> dict[str, Any]:
+        """Radio features and channels."""
+        try:
+            features_output = self.adb.shell(
+                "dumpsys wifi | grep -i 'SupportedFeatures\\|MIMO\\|antenna\\|band' | head -10"
+            )
+        except Exception:  # noqa: BLE001
+            features_output = ""
+
+        try:
+            channels_output = self.adb.shell("dumpsys wifi | grep -i 'SupportedChannelList'")
+        except Exception:  # noqa: BLE001
+            channels_output = ""
+
+        return self._wifi_capability_fields(features_output, channels_output)

@@ -11,6 +11,7 @@ import argparse
 import json
 import logging
 import sys
+from pathlib import Path
 from typing import NoReturn
 
 from adb_android_control import __version__
@@ -176,15 +177,25 @@ def cmd_scan_port(args: argparse.Namespace) -> int:
     return 1
 
 
+def _device_ip_from_config(config: Path, name: str) -> str | None:
+    """Read ``name=IP`` from the device config; ``None`` if missing."""
+    if not config.exists():
+        return None
+    for line in config.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith(f"{name}="):
+            found = line.split("=", 1)[1].strip()
+            return found.split(":")[0]  # tolerate a legacy NAME=IP:PORT line
+    return None
+
+
 def cmd_connect(args: argparse.Namespace) -> int:
     """Discover and connect to a configured device by name."""
-    from pathlib import Path
-
     from adb_android_control.port_scan import (
         connect_auto,
         read_last_port,
         save_last_port,
-        update_devices_ip,
+        update_device_entry,
     )
 
     home = Path.home()
@@ -196,16 +207,10 @@ def cmd_connect(args: argparse.Namespace) -> int:
         if not config.exists():
             print(f"Config {config} not found. Run `adb-control add {args.name} IP` first.")
             return 1
-        found = None
-        for line in config.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line.startswith(f"{args.name}="):
-                found = line.split("=", 1)[1].strip()
-                break
-        if found is None:
+        ip = _device_ip_from_config(config, args.name)
+        if ip is None:
             print(f"Device '{args.name}' not found in {config}.")
             return 1
-        ip = found.split(":")[0]  # tolerate a legacy NAME=IP:PORT line
 
     hint = read_last_port(state)
     port = connect_auto(
@@ -217,7 +222,7 @@ def cmd_connect(args: argparse.Namespace) -> int:
     )
     if port:
         save_last_port(state, port)
-        update_devices_ip(config, name=args.name, ip=ip)
+        update_device_entry(config, name=args.name, ip=ip)
         print(f"Connected: {args.name} at {ip}:{port}")
         return 0
     print(f"No ADB port found on {ip} in {args.start}-{args.end}")
@@ -227,66 +232,93 @@ def cmd_connect(args: argparse.Namespace) -> int:
 # Argparse wiring
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="adb-control",
-        description="Comprehensive Android device control via ADB.",
-    )
+def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
         "-v", "--verbose", action="count", default=0, help="Increase verbosity (-v, -vv)"
     )
     parser.add_argument("-s", "--serial", help="Target device serial")
 
-    sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("devices", help="List connected devices").set_defaults(func=cmd_devices)
-    sub.add_parser("info", help="Print device info as JSON").set_defaults(func=cmd_info)
+def _add_scan_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--start", type=int, default=30000)
+    parser.add_argument("--end", type=int, default=50000)
 
-    p_shot = sub.add_parser("shot", help="Take a screenshot")
-    p_shot.add_argument("path", nargs="?", help="Output path (default: screenshot.png)")
-    p_shot.set_defaults(func=cmd_shot)
 
-    p_mon = sub.add_parser("monitor", help="Real-time monitoring")
-    p_mon.add_argument("mode", choices=["logcat", "perf", "events", "crash"])
-    p_mon.add_argument(
+def _add_shot_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("shot", help="Take a screenshot")
+    p.add_argument("path", nargs="?", help="Output path (default: screenshot.png)")
+    p.set_defaults(func=cmd_shot)
+
+
+def _add_monitor_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("monitor", help="Real-time monitoring")
+    p.add_argument("mode", choices=["logcat", "perf", "events", "crash"])
+    p.add_argument(
         "-l",
         "--level",
         default="V",
         choices=["V", "D", "I", "W", "E", "F"],
         help="Logcat level filter (logcat mode only)",
     )
-    p_mon.add_argument("-i", "--interval", type=float, default=5.0, help="Perf interval seconds")
-    p_mon.set_defaults(func=cmd_monitor)
+    p.add_argument("-i", "--interval", type=float, default=5.0, help="Perf interval seconds")
+    p.set_defaults(func=cmd_monitor)
 
-    p_wf = sub.add_parser("workflow", help="Run a JSON workflow")
-    p_wf.add_argument("path", help="Path to workflow.json")
-    p_wf.set_defaults(func=cmd_workflow)
 
+def _add_workflow_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("workflow", help="Run a JSON workflow")
+    p.add_argument("path", help="Path to workflow.json")
+    p.set_defaults(func=cmd_workflow)
+
+
+def _add_radio_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("radio", help="Radio scanner (wifi/bluetooth/caps)")
+    p.add_argument("sections", nargs="*", help="One or more of: wifi scan bluetooth caps all")
+    p.set_defaults(func=cmd_radio)
+
+
+def _add_connection_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("connection", help="Connection monitor")
+    p.add_argument("subcommand", nargs="?", choices=["status", "check", "run"])
+    p.add_argument("-i", "--interval", type=int, default=10)
+    p.set_defaults(func=cmd_connection)
+
+
+def _add_scan_port_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("scan-port", help="Scan an IP for ADB port")
+    p.add_argument("ip")
+    _add_scan_args(p)
+    p.set_defaults(func=cmd_scan_port)
+
+
+def _add_connect_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("connect", help="Discover and connect a device by name")
+    p.add_argument("name", help="Device name from ~/.adb_devices")
+    p.add_argument("ip", nargs="?", help="IP override (default: from ~/.adb_devices)")
+    _add_scan_args(p)
+    p.add_argument("--workers", type=int, default=100, help="Scan threads")
+    p.set_defaults(func=cmd_connect)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="adb-control",
+        description="Comprehensive Android device control via ADB.",
+    )
+    _add_common_args(parser)
+
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("devices", help="List connected devices").set_defaults(func=cmd_devices)
+    sub.add_parser("info", help="Print device info as JSON").set_defaults(func=cmd_info)
+    _add_shot_parser(sub)
+    _add_monitor_parser(sub)
+    _add_workflow_parser(sub)
     sub.add_parser("health", help="Device health check (JSON)").set_defaults(func=cmd_health)
-
-    p_radio = sub.add_parser("radio", help="Radio scanner (wifi/bluetooth/caps)")
-    p_radio.add_argument("sections", nargs="*", help="One or more of: wifi scan bluetooth caps all")
-    p_radio.set_defaults(func=cmd_radio)
-
-    p_conn = sub.add_parser("connection", help="Connection monitor")
-    p_conn.add_argument("subcommand", nargs="?", choices=["status", "check", "run"])
-    p_conn.add_argument("-i", "--interval", type=int, default=10)
-    p_conn.set_defaults(func=cmd_connection)
-
-    p_scan = sub.add_parser("scan-port", help="Scan an IP for ADB port")
-    p_scan.add_argument("ip")
-    p_scan.add_argument("--start", type=int, default=30000)
-    p_scan.add_argument("--end", type=int, default=50000)
-    p_scan.set_defaults(func=cmd_scan_port)
-
-    p_conn = sub.add_parser("connect", help="Discover and connect a device by name")
-    p_conn.add_argument("name", help="Device name from ~/.adb_devices")
-    p_conn.add_argument("ip", nargs="?", help="IP override (default: from ~/.adb_devices)")
-    p_conn.add_argument("--start", type=int, default=30000)
-    p_conn.add_argument("--end", type=int, default=50000)
-    p_conn.add_argument("--workers", type=int, default=100, help="Scan threads")
-    p_conn.set_defaults(func=cmd_connect)
+    _add_radio_parser(sub)
+    _add_connection_parser(sub)
+    _add_scan_port_parser(sub)
+    _add_connect_parser(sub)
 
     return parser
 

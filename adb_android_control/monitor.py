@@ -324,6 +324,26 @@ class EventMonitor:
         self.process: subprocess.Popen[str] | None = None
         self.running: bool = False
 
+    def _event_capture_argv(self, device: str) -> list[str]:
+        """Build the ``adb shell getevent`` argv for ``device``."""
+        cmd: list[str] = ["adb"]
+        if self.adb.device_serial is not None:
+            cmd.extend(["-s", self.adb.device_serial])
+        cmd.extend(["shell", "getevent", "-lt", device])
+        return cmd
+
+    def _stream_event_lines(self, callback: Callable[[str], None] | None) -> None:
+        """Read getevent lines and dispatch to ``callback`` until stopped."""
+        while self.running and self.process is not None and self.process.stdout is not None:
+            line = self.process.stdout.readline()
+            if not line:
+                break
+            stripped = line.strip()
+            if callback is not None:
+                callback(stripped)
+            else:
+                print(stripped)  # noqa: T201
+
     def start_event_capture(
         self,
         device: str = "/dev/input/event0",
@@ -331,13 +351,8 @@ class EventMonitor:
         callback: Callable[[str], None] | None = None,
     ) -> None:
         """Stream getevent; blocks until stopped."""
-        cmd: list[str] = ["adb"]
-        if self.adb.device_serial is not None:
-            cmd.extend(["-s", self.adb.device_serial])
-        cmd.extend(["shell", "getevent", "-lt", device])
-
         self.process = subprocess.Popen(
-            cmd,
+            self._event_capture_argv(device),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -345,15 +360,7 @@ class EventMonitor:
         self.running = True
 
         try:
-            while self.running and self.process.stdout is not None:
-                line = self.process.stdout.readline()
-                if not line:
-                    break
-                stripped = line.strip()
-                if callback is not None:
-                    callback(stripped)
-                else:
-                    print(stripped)  # noqa: T201
+            self._stream_event_lines(callback)
         except KeyboardInterrupt:
             # Ctrl-C ends the capture; teardown is in `finally`.
             pass

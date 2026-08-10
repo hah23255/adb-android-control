@@ -215,7 +215,7 @@ class TestConnectDisconnect:
         ctrl = ADBController()
 
         # Act
-        ok = ctrl.connect("10.0.0.1")
+        ok = ctrl.connect("10.0.0.1", port=5555)
 
         # Assert
         assert ok is True
@@ -231,10 +231,31 @@ class TestConnectDisconnect:
         ctrl = ADBController()
 
         # Act
-        ok = ctrl.connect("10.0.0.1")
+        ok = ctrl.connect("10.0.0.1", port=5555)
 
         # Assert
         assert ok is False
+
+    def test_connect_auto_discovers_port_when_none(
+        self, mock_adb: PoisonPillADB, monkeypatch
+    ) -> None:
+        # Arrange
+        mock_adb.register(["adb", "version"], stdout="v1\n")
+        mock_adb.register(
+            ["adb", "connect", "10.0.0.1:42891"],
+            stdout="connected to 10.0.0.1:42891\n",
+        )
+        monkeypatch.setattr(
+            "adb_android_control.port_scan.connect_auto",
+            lambda ip, **kwargs: 42891,
+        )
+        ctrl = ADBController()
+
+        # Act
+        ok = ctrl.connect("10.0.0.1")
+
+        # Assert
+        assert ok is True
 
     def test_disconnect_all_when_no_host_given(self, mock_adb: PoisonPillADB) -> None:
         # Arrange

@@ -60,6 +60,38 @@ class Change:
 SIGNAL_CHANGE_DB_THRESHOLD = 10
 
 
+def _diff_connectivity(last: ConnectionState, current: ConnectionState) -> Change | None:
+    """Connectivity transition (dis/connected, port, network)."""
+    if last.connected and not current.connected:
+        return Change(ChangeType.DISCONNECTED, f"Lost connection to {last.ip}:{last.port}")
+    if not last.connected and current.connected:
+        return Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}")
+    if current.connected and last.port != current.port:
+        return Change(ChangeType.PORT_CHANGED, f"{last.port} → {current.port}")
+    if current.connected and last.ip != current.ip:
+        return Change(ChangeType.NETWORK_CHANGED, f"{last.ip} → {current.ip}")
+    return None
+
+
+def _diff_network(last: ConnectionState, current: ConnectionState) -> Change | None:
+    """Wi-Fi network change."""
+    if last.ssid != current.ssid and current.ssid != "Unknown":
+        return Change(ChangeType.WIFI_CHANGED, f"{last.ssid} → {current.ssid}")
+    return None
+
+
+def _diff_signal(
+    last: ConnectionState, current: ConnectionState, *, threshold_db: int
+) -> Change | None:
+    """Signal-strength change beyond the threshold."""
+    if abs(last.rssi_dbm - current.rssi_dbm) > threshold_db:
+        return Change(
+            ChangeType.SIGNAL_CHANGED,
+            f"{last.rssi_dbm}dB → {current.rssi_dbm}dB",
+        )
+    return None
+
+
 def detect_changes(
     last: ConnectionState | None,
     current: ConnectionState,
@@ -67,38 +99,19 @@ def detect_changes(
     signal_threshold_db: int = SIGNAL_CHANGE_DB_THRESHOLD,
 ) -> list[Change]:
     """Diff two states into :class:`Change` items."""
-    changes: list[Change] = []
-
     if last is None:
         if current.connected:
-            changes.append(Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}"))
-        return changes
+            return [Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}")]
+        return []
 
-    if last.connected and not current.connected:
-        changes.append(
-            Change(
-                ChangeType.DISCONNECTED,
-                f"Lost connection to {last.ip}:{last.port}",
-            )
-        )
-    elif not last.connected and current.connected:
-        changes.append(Change(ChangeType.CONNECTED, f"{current.ip}:{current.port}"))
-    elif current.connected and last.port != current.port:
-        changes.append(Change(ChangeType.PORT_CHANGED, f"{last.port} → {current.port}"))
-    elif current.connected and last.ip != current.ip:
-        changes.append(Change(ChangeType.NETWORK_CHANGED, f"{last.ip} → {current.ip}"))
-
-    if last.ssid != current.ssid and current.ssid != "Unknown":
-        changes.append(Change(ChangeType.WIFI_CHANGED, f"{last.ssid} → {current.ssid}"))
-
-    if abs(last.rssi_dbm - current.rssi_dbm) > signal_threshold_db:
-        changes.append(
-            Change(
-                ChangeType.SIGNAL_CHANGED,
-                f"{last.rssi_dbm}dB → {current.rssi_dbm}dB",
-            )
-        )
-
+    changes: list[Change] = []
+    for diff in (
+        _diff_connectivity(last, current),
+        _diff_network(last, current),
+        _diff_signal(last, current, threshold_db=signal_threshold_db),
+    ):
+        if diff is not None:
+            changes.append(diff)
     return changes
 
 

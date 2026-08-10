@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from adb_android_control.radio import (
     RadioScanner,
@@ -15,6 +15,7 @@ from adb_android_control.radio import (
 if TYPE_CHECKING:
     from adb_android_control.connection_monitor import ConnectionMonitor
     from adb_android_control.monitor import LogEntry, PerformanceSnapshot
+    from adb_android_control.radio import WiFiInfo
 
 
 def _line(text: str = "") -> None:
@@ -56,6 +57,43 @@ def print_snapshot(snapshot: PerformanceSnapshot) -> None:
 _HR = "=" * 60
 
 
+def _print_adb_wifi(adb_wifi: WiFiInfo) -> None:
+    """Render Wi-Fi details from the ADB source."""
+    _line(f"  SSID:        {adb_wifi.ssid}")
+    _line(f"  BSSID:       {adb_wifi.bssid}")
+    _line(f"  Signal:      {adb_wifi.rssi_dbm} dBm ({rssi_to_quality(adb_wifi.rssi_dbm)})")
+    _line(f"  Frequency:   {adb_wifi.frequency_mhz} MHz (Channel {adb_wifi.channel})")
+    _line(f"  Band:        {adb_wifi.band}")
+    _line(f"  Standard:    802.{adb_wifi.standard}")
+    _line(f"  Link Speed:  {adb_wifi.link_speed_mbps} Mbps")
+    _line(f"  TX Speed:    {adb_wifi.tx_speed_mbps} Mbps")
+    _line(f"  RX Speed:    {adb_wifi.rx_speed_mbps} Mbps")
+
+
+def _print_termux_wifi(termux_wifi: dict[str, Any]) -> None:
+    """Render Wi-Fi details from the Termux source."""
+    rssi = termux_wifi.get("rssi", 0)
+    freq = termux_wifi.get("frequency_mhz", 0)
+    _line(f"  SSID:        {termux_wifi.get('ssid', 'Unknown')}")
+    _line(f"  BSSID:       {termux_wifi.get('bssid', 'Unknown')}")
+    _line(f"  Signal:      {rssi} dBm ({rssi_to_quality(rssi)})")
+    _line(f"  Frequency:   {freq} MHz (Channel {freq_to_channel(freq)})")
+    _line(f"  Band:        {freq_to_band(freq)}")
+    _line(f"  Link Speed:  {termux_wifi.get('link_speed_mbps', 0)} Mbps")
+    _line(f"  IP:          {termux_wifi.get('ip', 'Unknown')}")
+
+
+def _print_link_stats(scanner: RadioScanner) -> None:
+    """Render link statistics if available."""
+    stats = scanner.get_link_stats()
+    if stats:
+        _line(
+            f"\n  TX Stats:    Good: {stats.get('tx_good', 0)}, "
+            f"Retry: {stats.get('tx_retry', 0)}, Bad: {stats.get('tx_bad', 0)}"
+        )
+        _line(f"  RX Stats:    Good: {stats.get('rx_good', 0)}")
+
+
 def print_wifi_status(scanner: RadioScanner | None = None) -> None:
     """Print current Wi-Fi connection info."""
     scanner = scanner or RadioScanner()
@@ -67,35 +105,13 @@ def print_wifi_status(scanner: RadioScanner | None = None) -> None:
     termux_wifi = scanner.get_wifi_via_termux() if adb_wifi is None else None
 
     if adb_wifi is not None:
-        _line(f"  SSID:        {adb_wifi.ssid}")
-        _line(f"  BSSID:       {adb_wifi.bssid}")
-        _line(f"  Signal:      {adb_wifi.rssi_dbm} dBm ({rssi_to_quality(adb_wifi.rssi_dbm)})")
-        _line(f"  Frequency:   {adb_wifi.frequency_mhz} MHz (Channel {adb_wifi.channel})")
-        _line(f"  Band:        {adb_wifi.band}")
-        _line(f"  Standard:    802.{adb_wifi.standard}")
-        _line(f"  Link Speed:  {adb_wifi.link_speed_mbps} Mbps")
-        _line(f"  TX Speed:    {adb_wifi.tx_speed_mbps} Mbps")
-        _line(f"  RX Speed:    {adb_wifi.rx_speed_mbps} Mbps")
+        _print_adb_wifi(adb_wifi)
     elif termux_wifi is not None:
-        rssi = termux_wifi.get("rssi", 0)
-        freq = termux_wifi.get("frequency_mhz", 0)
-        _line(f"  SSID:        {termux_wifi.get('ssid', 'Unknown')}")
-        _line(f"  BSSID:       {termux_wifi.get('bssid', 'Unknown')}")
-        _line(f"  Signal:      {rssi} dBm ({rssi_to_quality(rssi)})")
-        _line(f"  Frequency:   {freq} MHz (Channel {freq_to_channel(freq)})")
-        _line(f"  Band:        {freq_to_band(freq)}")
-        _line(f"  Link Speed:  {termux_wifi.get('link_speed_mbps', 0)} Mbps")
-        _line(f"  IP:          {termux_wifi.get('ip', 'Unknown')}")
+        _print_termux_wifi(termux_wifi)
     else:
         _line("  WiFi info not available")
 
-    stats = scanner.get_link_stats()
-    if stats:
-        _line(
-            f"\n  TX Stats:    Good: {stats.get('tx_good', 0)}, "
-            f"Retry: {stats.get('tx_retry', 0)}, Bad: {stats.get('tx_bad', 0)}"
-        )
-        _line(f"  RX Stats:    Good: {stats.get('rx_good', 0)}")
+    _print_link_stats(scanner)
     _line()
 
 
@@ -144,27 +160,27 @@ def print_bluetooth_status(scanner: RadioScanner | None = None) -> None:
     _line()
 
 
-def print_radio_capabilities(scanner: RadioScanner | None = None) -> None:
-    """Print device radio capabilities (features, MIMO, channel lists)."""
-    scanner = scanner or RadioScanner()
-    _line(_HR)
-    _line("📻 Radio Capabilities")
-    _line(_HR)
+_KEY_FEATURES = (
+    "P2P",
+    "TDLS",
+    "D2D_RTT",
+    "LOW_LATENCY",
+    "DUAL_BAND_SIMULTANEOUS",
+)
 
-    caps = scanner.get_capabilities()
-    features = caps.get("features", [])
-    if features:
-        _line(f"  WiFi Features: {len(features)} supported")
-        key_features = [
-            "P2P",
-            "TDLS",
-            "D2D_RTT",
-            "LOW_LATENCY",
-            "DUAL_BAND_SIMULTANEOUS",
-        ]
-        for f in key_features:
-            status = "✓" if f in features else "✗"
-            _line(f"    {status} {f.replace('_', ' ').title()}")
+
+def _print_feature_flags(features: list[str]) -> None:
+    """Render the supported Wi-Fi feature flags."""
+    if not features:
+        return
+    _line(f"  WiFi Features: {len(features)} supported")
+    for f in _KEY_FEATURES:
+        status = "✓" if f in features else "✗"
+        _line(f"    {status} {f.replace('_', ' ').title()}")
+
+
+def _print_channel_lists(caps: dict[str, Any]) -> None:
+    """Render per-band channel lists, truncating long 6GHz lists."""
     if caps.get("mimo_likely"):
         _line("\n  MIMO:        Supported (Multi-stream capable)")
     if caps.get("channels_24ghz"):
@@ -173,10 +189,20 @@ def print_radio_capabilities(scanner: RadioScanner | None = None) -> None:
         _line(f"  5GHz Ch:     {caps['channels_5ghz']}")
     if caps.get("channels_6ghz"):
         chans = caps["channels_6ghz"]
-        if len(chans) > 50:
-            _line(f"  6GHz Ch:     {chans[:50]}...")
-        else:
-            _line(f"  6GHz Ch:     {chans}")
+        shown = chans[:50] + "..." if len(chans) > 50 else chans
+        _line(f"  6GHz Ch:     {shown}")
+
+
+def print_radio_capabilities(scanner: RadioScanner | None = None) -> None:
+    """Print device radio capabilities (features, MIMO, channel lists)."""
+    scanner = scanner or RadioScanner()
+    _line(_HR)
+    _line("📻 Radio Capabilities")
+    _line(_HR)
+
+    caps = scanner.get_capabilities()
+    _print_feature_flags(caps.get("features", []))
+    _print_channel_lists(caps)
     _line()
 
 

@@ -230,6 +230,22 @@ class ADBAutomation:
             _sleep(step.delay_after_s)
         return outcome
 
+    def _run_workflow_step(
+        self, step: AutomationStep, index: int, total: int
+    ) -> tuple[StepOutcome, str | None]:
+        """Execute one step; return ``(outcome, error_msg)``."""
+        logger.info(
+            "Step %d/%d: %s — %s",
+            index + 1,
+            total,
+            step.action,
+            step.description,
+        )
+        outcome = self.execute_step(step)
+        if outcome.success:
+            return outcome, None
+        return outcome, f"Step {index + 1} ({step.action}): {outcome.error or 'failed'}"
+
     def run_workflow(
         self,
         steps: list[AutomationStep],
@@ -243,20 +259,13 @@ class ADBAutomation:
         screenshots: list[str] = []
 
         for i, step in enumerate(steps):
-            logger.info(
-                "Step %d/%d: %s — %s",
-                i + 1,
-                len(steps),
-                step.action,
-                step.description,
-            )
-            outcome = self.execute_step(step)
+            outcome, error = self._run_workflow_step(step, i, len(steps))
             if outcome.artifact_path is not None:
                 screenshots.append(outcome.artifact_path)
             if outcome.success:
                 completed += 1
             else:
-                errors.append(f"Step {i + 1} ({step.action}): {outcome.error or 'failed'}")
+                errors.append(error or "failed")
                 if stop_on_error:
                     break
 

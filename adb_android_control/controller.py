@@ -79,6 +79,31 @@ def _validate_identifier(value: str, name: str = "identifier") -> None:
         raise ValueError(f"Invalid {name}: {value!r}")
 
 
+def _adb_run(
+    args: list[str], *, timeout: int = DEFAULT_TIMEOUT_S, text: bool = True
+) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
+    """Run an adb command with output capture.
+
+    Raises :class:`ADBNotFoundError` when adb is missing and
+    :class:`ADBTimeoutError` on timeout. The caller inspects ``returncode``.
+    """
+    try:
+        return subprocess.run(
+            args,
+            capture_output=True,
+            text=text,
+            timeout=timeout,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise ADBNotFoundError(
+            "ADB binary not found on PATH. Install Android platform-tools "
+            "or `pkg install android-tools` on Termux."
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise ADBTimeoutError(f"Command timed out after {timeout}s: {' '.join(args)}") from exc
+
+
 class ADBController:
     """Typed wrapper over the `adb` CLI."""
 
@@ -91,21 +116,9 @@ class ADBController:
     def _verify_adb(self) -> None:
         """Verify ADB is on PATH and runnable."""
         try:
-            result = subprocess.run(
-                ["adb", "version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=False,
-            )
-        except FileNotFoundError as exc:
-            raise ADBNotFoundError(
-                "ADB binary not found on PATH. Install Android platform-tools "
-                "or `pkg install android-tools` on Termux."
-            ) from exc
-        except subprocess.TimeoutExpired as exc:
+            result = _adb_run(["adb", "version"], timeout=10)
+        except ADBTimeoutError as exc:
             raise ADBTimeoutError("`adb version` timed out — adb-server may be wedged.") from exc
-
         if result.returncode != 0:
             raise ADBError(f"`adb version` exited {result.returncode}: {result.stderr.strip()}")
 
@@ -118,16 +131,7 @@ class ADBController:
 
         logger.debug("Running: %s", " ".join(full_cmd))
 
-        try:
-            result = subprocess.run(
-                full_cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise ADBTimeoutError(f"Command timed out after {timeout}s: {' '.join(cmd)}") from exc
+        result = _adb_run(full_cmd, timeout=timeout)
 
         if result.returncode != 0:
             stderr = result.stderr.strip()
@@ -167,8 +171,17 @@ class ADBController:
             devices.append(entry)
         return devices
 
-    def connect(self, host: str, port: int = 5555) -> bool:
-        """Connect to ``host:port``."""
+    def connect(self, host: str, port: int | None = None) -> bool:
+        """Connect to ``host``.
+
+        With no port, the ADB wireless port is auto-discovered per session.
+        """
+        if port is None:
+            from adb_android_control.port_scan import connect_auto
+
+            port = connect_auto(host)
+            if not port:
+                return False
         try:
             result = self._run(["connect", f"{host}:{port}"])
         except ADBError:
@@ -321,14 +334,9 @@ class ADBController:
         argv.extend(["exec-out", "screencap", "-p"])
 
         try:
-            result = subprocess.run(
-                argv,
-                capture_output=True,
-                timeout=DEFAULT_TIMEOUT_S,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            logger.error("Screenshot timed out")
+            result = _adb_run(argv, text=False)
+        except ADBError as exc:
+            logger.error("Screenshot failed: %s", exc)
             return False
 
         raw_err = result.stderr

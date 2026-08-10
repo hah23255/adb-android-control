@@ -15,6 +15,10 @@ import subprocess
 
 logger = logging.getLogger(__name__)
 
+# Android wireless-debugging ports are session-scoped within this range.
+ADB_PORT_RANGE_START = 30000
+ADB_PORT_RANGE_END = 50000
+
 
 def check_port(ip: str, port: int, *, timeout_s: float = 0.5) -> bool:
     """True if ``ip:port`` accepts a TCP connection."""
@@ -62,25 +66,12 @@ def try_adb_connect(ip: str, port: int, *, timeout_s: int = 3) -> bool:
     return device_is_online(ip, port, timeout_s=timeout_s)
 
 
-def rewrite_devices_config(content: str, *, name: str, ip: str, port: int) -> str:
-    """Rewrite the ``{name}=`` line to ``ip:port``."""
+def rewrite_device_line(content: str, *, name: str, ip: str, port: int | None = None) -> str:
+    """Rewrite the ``{name}=`` line to ``ip`` or ``ip:port``."""
     new_lines: list[str] = []
+    entry = f"{name}={ip}" if port is None else f"{name}={ip}:{port}"
     for line in content.split("\n"):
-        if line.startswith(f"{name}="):
-            new_lines.append(f"{name}={ip}:{port}")
-        else:
-            new_lines.append(line)
-    return "\n".join(new_lines)
-
-
-def rewrite_devices_ip(content: str, *, name: str, ip: str) -> str:
-    """Rewrite the ``{name}=`` line to ``ip``."""
-    new_lines: list[str] = []
-    for line in content.split("\n"):
-        if line.startswith(f"{name}="):
-            new_lines.append(f"{name}={ip}")
-        else:
-            new_lines.append(line)
+        new_lines.append(entry if line.startswith(f"{name}=") else line)
     return "\n".join(new_lines)
 
 
@@ -110,7 +101,13 @@ class PortScanner:
                 if future.result()
             )
 
-    def find_adb_port(self, ip: str, *, start: int = 30000, end: int = 50000) -> int:
+    def find_adb_port(
+        self,
+        ip: str,
+        *,
+        start: int = ADB_PORT_RANGE_START,
+        end: int = ADB_PORT_RANGE_END,
+    ) -> int:
         """Find an ADB port in ``[start, end]``; 0 if none."""
         logger.info("Scanning %s ports %d-%d", ip, start, end)
         for port in self.find_open_ports(ip, start=start, end=end):
@@ -123,8 +120,8 @@ def connect_auto(
     ip: str,
     *,
     hint_port: int | None = None,
-    start: int = 30000,
-    end: int = 50000,
+    start: int = ADB_PORT_RANGE_START,
+    end: int = ADB_PORT_RANGE_END,
     max_workers: int = 100,
 ) -> int:
     """Connect to ``ip`` via a discovered ADB port."""
@@ -137,30 +134,19 @@ def connect_auto(
     return 0
 
 
-def update_devices_file(
+def update_device_entry(
     config_file: Path,
     *,
     name: str,
     ip: str,
-    port: int,
+    port: int | None = None,
 ) -> None:
-    """Rewrite the ``{name}=`` entry to ``ip:port``."""
+    """Rewrite the ``{name}=`` entry to ``ip`` or ``ip:port``."""
     if not config_file.exists():
         return
     content = config_file.read_text(encoding="utf-8")
     config_file.write_text(
-        rewrite_devices_config(content, name=name, ip=ip, port=port),
-        encoding="utf-8",
-    )
-
-
-def update_devices_ip(config_file: Path, *, name: str, ip: str) -> None:
-    """Rewrite the ``{name}=`` entry to ``ip``."""
-    if not config_file.exists():
-        return
-    content = config_file.read_text(encoding="utf-8")
-    config_file.write_text(
-        rewrite_devices_ip(content, name=name, ip=ip),
+        rewrite_device_line(content, name=name, ip=ip, port=port),
         encoding="utf-8",
     )
 
