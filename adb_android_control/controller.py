@@ -212,6 +212,17 @@ class ADBController:
             return False
         return True
 
+    def _resolve_serial(self) -> str:
+        """Return the device serial, resolving the single connected device."""
+        if self.device_serial is not None:
+            return self.device_serial
+        devices = self.devices()
+        if len(devices) != 1:
+            raise DeviceOfflineError(
+                f"Expected one connected device, found {len(devices)}; use -s SERIAL"
+            )
+        return devices[0]["serial"]
+
     def get_device_info(self) -> DeviceInfo:
         """Device info snapshot."""
         model = self._shell("getprop ro.product.model")
@@ -226,7 +237,7 @@ class ADBController:
         battery = self.get_battery_level()
 
         return DeviceInfo(
-            serial=self.device_serial or "unknown",
+            serial=self._resolve_serial(),
             model=model,
             android_version=android_ver,
             sdk_version=sdk,

@@ -288,6 +288,9 @@ class TestDeviceInfo:
         battery: str = "level: 87",
     ) -> None:
         mock_adb.register(["adb", "version"], stdout="v1\n")
+        mock_adb.register(
+            ["adb", "devices", "-l"], stdout="List of devices attached\nANDROID-1\tdevice\n"
+        )
         mock_adb.register(["adb", "shell", "getprop ro.product.model"], stdout=model)
         mock_adb.register(["adb", "shell", "getprop ro.build.version.release"], stdout=version)
         mock_adb.register(["adb", "shell", "getprop ro.build.version.sdk"], stdout=sdk)

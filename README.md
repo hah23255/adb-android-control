@@ -195,11 +195,18 @@ This project is the simple middle ground: a typed Python wrapper around everythi
 
 ```bash
 pip install -e ".[dev]"
-pytest                       # 349 tests + property-based fuzzing
+pytest                       # 350 tests + property-based fuzzing
 pytest -m property           # property tests only
 pytest -m race               # concurrency tests
 pytest --cov                 # coverage report
+uv build                     # build sdist + wheel into dist/
 ```
+
+**Building the package:** use `uv build` (or `pip wheel . --no-deps -w dist`). `python -m build` does **not** work from the repo root — the local `build/` directory shadows the `build` module; run it from outside the checkout if you need it.
+
+**Termux notes:**
+- `/tmp` is not writable in the Android sandbox — use `~/tmp` for scratch space.
+- After changing the repo, refresh the installed CLI with: `uv tool install --from . adb-android-control --force`
 
 The project follows the **Master Tester Doctrine** — see `docs/TESTING_DOCTRINE.md`. In short: every public method has a test, tests never touch the real `subprocess` (a poison-pill `adb` fixture is used instead), and everything is deterministic.
 
