@@ -144,3 +144,6 @@ assets/demos/*.gif
 
 # Reference doctrine bundle (held privately off-repo)
 docs/master-tester-doctrine/
+
+# agy delegation run artifacts
+.agy-runs/

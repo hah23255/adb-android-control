@@ -1,23 +1,4 @@
-"""Unified CLI entrypoint — ``adb-control`` console script.
-
-Wired in ``pyproject.toml``::
-
-    [project.scripts]
-    adb-control = "adb_android_control.cli:main"
-
-Subcommand layout::
-
-    adb-control devices              # list connected devices
-    adb-control info                 # show device info snapshot
-    adb-control shot [PATH]          # take a screenshot
-    adb-control monitor MODE         # logcat | perf | events | crash
-    adb-control workflow PATH        # run a JSON workflow
-    adb-control health               # device-manager health check (JSON)
-    adb-control radio [SUBS...]      # wifi/scan/bluetooth/caps (default all)
-    adb-control connection [CMD]     # status | check | run [interval]
-    adb-control scan-port IP [START] [END]  # scan IP for ADB port
-    adb-control --version            # print version
-"""
+"""Unified CLI entrypoint — ``adb-control`` console script."""
 
 from __future__ import annotations
 
@@ -45,9 +26,7 @@ def _setup_logging(verbosity: int) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
 # Subcommand handlers
-# ---------------------------------------------------------------------------
 
 
 def cmd_devices(args: argparse.Namespace) -> int:
@@ -197,9 +176,55 @@ def cmd_scan_port(args: argparse.Namespace) -> int:
     return 1
 
 
-# ---------------------------------------------------------------------------
+def cmd_connect(args: argparse.Namespace) -> int:
+    """Discover and connect to a configured device by name."""
+    from pathlib import Path
+
+    from adb_android_control.port_scan import (
+        connect_auto,
+        read_last_port,
+        save_last_port,
+        update_devices_ip,
+    )
+
+    home = Path.home()
+    config = home / ".adb_devices"
+    state = home / ".adb_last_port"
+
+    ip = args.ip
+    if ip is None:
+        if not config.exists():
+            print(f"Config {config} not found. Run `adb-control add {args.name} IP` first.")
+            return 1
+        found = None
+        for line in config.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith(f"{args.name}="):
+                found = line.split("=", 1)[1].strip()
+                break
+        if found is None:
+            print(f"Device '{args.name}' not found in {config}.")
+            return 1
+        ip = found.split(":")[0]  # tolerate a legacy NAME=IP:PORT line
+
+    hint = read_last_port(state)
+    port = connect_auto(
+        ip,
+        hint_port=hint,
+        start=args.start,
+        end=args.end,
+        max_workers=args.workers,
+    )
+    if port:
+        save_last_port(state, port)
+        update_devices_ip(config, name=args.name, ip=ip)
+        print(f"Connected: {args.name} at {ip}:{port}")
+        return 0
+    print(f"No ADB port found on {ip} in {args.start}-{args.end}")
+    return 1
+
+
 # Argparse wiring
-# ---------------------------------------------------------------------------
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -252,8 +277,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_scan = sub.add_parser("scan-port", help="Scan an IP for ADB port")
     p_scan.add_argument("ip")
     p_scan.add_argument("--start", type=int, default=30000)
-    p_scan.add_argument("--end", type=int, default=45000)
+    p_scan.add_argument("--end", type=int, default=50000)
     p_scan.set_defaults(func=cmd_scan_port)
+
+    p_conn = sub.add_parser("connect", help="Discover and connect a device by name")
+    p_conn.add_argument("name", help="Device name from ~/.adb_devices")
+    p_conn.add_argument("ip", nargs="?", help="IP override (default: from ~/.adb_devices)")
+    p_conn.add_argument("--start", type=int, default=30000)
+    p_conn.add_argument("--end", type=int, default=50000)
+    p_conn.add_argument("--workers", type=int, default=100, help="Scan threads")
+    p_conn.set_defaults(func=cmd_connect)
 
     return parser
 

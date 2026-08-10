@@ -1,22 +1,4 @@
-"""ADB controller — main interface for Android device control.
-
-Doctrine: Master Tester Doctrine, Law 2 (test behaviour, not implementation).
-The public API is the contract; `_run` and `_shell` are package-private and
-should not be tested directly — instead, test the public methods that
-compose them.
-
-Security note: shell-command-injection surface
-----------------------------------------------
-Several methods (e.g. :meth:`ADBController.clear_data`, :meth:`force_stop`,
-:meth:`get_property`, :meth:`set_setting`) interpolate caller-supplied
-strings into shell commands that run on the *device*. To close that surface,
-identifier arguments (package/activity/property/settings keys, logcat tags)
-are validated against an allow-list (:func:`_validate_identifier` /
-``_IDENTIFIER_RE`` / ``_TAG_RE``) and raise :class:`ValueError` on anything
-containing a shell metacharacter; free-form path/value/text arguments are
-``shlex.quote``-d before interpolation. Both fail closed rather than passing
-unsafe input to the device shell.
-"""
+"""ADB controller — main interface."""
 
 from __future__ import annotations
 
@@ -29,41 +11,34 @@ from enum import Enum
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-# Library code does NOT call logging.basicConfig — leave that to the app.
+# No logging.basicConfig — leave that to apps.
 
-
-# ---------------------------------------------------------------------------
-# Typed exception hierarchy (Phase 2 plan §2.4)
-# ---------------------------------------------------------------------------
-
+# Typed exception hierarchy.
 
 class ADBError(Exception):
-    """Base class for any ADB-operation failure raised by this package."""
+    """Base ADB failure."""
 
 
 class ADBNotFoundError(ADBError):
-    """Raised when the `adb` binary is not installed or not on PATH."""
+    """adb binary missing."""
 
 
 class DeviceOfflineError(ADBError):
-    """Raised when the target device is offline or unauthorized."""
+    """Device offline or unauthorized."""
 
 
 class ADBTimeoutError(ADBError):
-    """Raised when an ADB command exceeds its timeout."""
+    """ADB command timed out."""
 
 
 class ADBPermissionError(ADBError):
-    """Raised when an ADB command fails due to permission denial."""
+    """Permission denied by ADB."""
 
 
-# ---------------------------------------------------------------------------
-# Types
-# ---------------------------------------------------------------------------
 
 
 class DeviceState(Enum):
-    """Device connection states reported by `adb devices`."""
+    """Device states from `adb devices`."""
 
     DEVICE = "device"
     OFFLINE = "offline"
@@ -73,11 +48,7 @@ class DeviceState(Enum):
 
 @dataclass(frozen=True)
 class DeviceInfo:
-    """Snapshot of a connected device's identifying & state attributes.
-
-    Frozen so that test fixtures can be safely shared across tests
-    (Doctrine Law 5: isolation).
-    """
+    """Device identity and state snapshot."""
 
     serial: str
     model: str
@@ -88,9 +59,6 @@ class DeviceInfo:
     state: DeviceState
 
 
-# ---------------------------------------------------------------------------
-# Controller
-# ---------------------------------------------------------------------------
 
 DEFAULT_TIMEOUT_S = 30
 INSTALL_TIMEOUT_S = 120
@@ -99,54 +67,32 @@ TRANSFER_TIMEOUT_S = 300
 _BATTERY_LEVEL_RE = re.compile(r"level:\s*(\d+)")
 _SCREEN_SIZE_RE = re.compile(r"(\d+)x(\d+)")
 
-# PNG magic number. On multi-display devices (e.g. foldables) `screencap -p`
-# prints a "[Warning] Multiple displays were found" banner to stdout ahead of
-# the image, so screenshot() locates this signature rather than trusting the
-# stream to start with it.
+# Locate PNG by signature (screencap may prepend a warning banner).
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
-# Allow-list for Android identifiers (package / activity / property / settings
-# keys) interpolated into device-side shell commands. Fail closed: reject any
-# value containing a shell metacharacter before it can reach the device shell.
+# Fail closed on shell metacharacters.
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._/]+$")
 _TAG_RE = re.compile(r"^[A-Za-z0-9._]+$")
 
 
 def _validate_identifier(value: str, name: str = "identifier") -> None:
-    """Raise :class:`ValueError` if ``value`` is not a safe Android identifier."""
+    """Raise ValueError for unsafe identifiers."""
     if not _IDENTIFIER_RE.fullmatch(value):
         raise ValueError(f"Invalid {name}: {value!r}")
 
 
 class ADBController:
-    """Thin, typed wrapper over the `adb` CLI for one target device.
+    """Typed wrapper over the `adb` CLI."""
 
-    Pass ``device_serial`` to scope every command to a specific device;
-    omit it to use the only-connected-device default. ADB binary
-    availability is verified eagerly during construction.
-    """
-
-    # Class-level default so MagicMock(spec_set=ADBController) sees
-    # this attribute (Doctrine Pattern: Poison-Pill Mock — strict mocks
-    # introspect via dir(cls); a class-level annotation alone is invisible
-    # to dir(), so we provide an explicit default that __init__ overrides
-    # per-instance).
     device_serial: str | None = None
 
     def __init__(self, device_serial: str | None = None) -> None:
         self.device_serial = device_serial
         self._verify_adb()
 
-    # ------------------------------------------------------------------ core
 
     def _verify_adb(self) -> None:
-        """Verify ADB is on PATH and runnable.
-
-        Raises
-        ------
-        ADBNotFoundError
-            If `adb` is not installed or not on PATH.
-        """
+        """Verify ADB is on PATH and runnable."""
         try:
             result = subprocess.run(
                 ["adb", "version"],
@@ -167,21 +113,7 @@ class ADBController:
             raise ADBError(f"`adb version` exited {result.returncode}: {result.stderr.strip()}")
 
     def _run(self, cmd: list[str], timeout: int = DEFAULT_TIMEOUT_S) -> str:
-        """Run an ADB sub-command and return stdout.
-
-        Parameters
-        ----------
-        cmd : list[str]
-            ADB sub-command parts, e.g. ``["shell", "getprop", "ro.product.model"]``.
-            Always argv-list — never a single string — to avoid shell injection
-            on the host side.
-        timeout : int
-            Seconds before raising :class:`ADBTimeoutError`.
-
-        Raises
-        ------
-        ADBError, ADBTimeoutError, DeviceOfflineError, ADBPermissionError
-        """
+        """Run an adb sub-command."""
         full_cmd: list[str] = ["adb"]
         if self.device_serial is not None:
             full_cmd.extend(["-s", self.device_serial])
@@ -212,29 +144,19 @@ class ADBController:
         return result.stdout.strip()
 
     def _shell(self, cmd: str, timeout: int = DEFAULT_TIMEOUT_S) -> str:
-        """Run a shell command on the device. See module-level security note."""
+        """Run a shell command on the device."""
         return self._run(["shell", cmd], timeout=timeout)
 
     def shell(self, cmd: str, *, timeout: int = DEFAULT_TIMEOUT_S) -> str:
-        """Public counterpart to :meth:`_shell` — run a shell command on the device.
-
-        Doctrine Law 2: Other modules in the package compose against this
-        public method instead of reaching into ``_shell``. See module-level
-        security note for the injection-surface caveat.
-        """
+        """Public counterpart to :meth:`_shell`."""
         return self._shell(cmd, timeout=timeout)
 
-    # ---------------------------------------------------------- device mgmt
 
     def devices(self) -> list[dict[str, str]]:
-        """List connected devices with their state and metadata.
-
-        Returns one dict per device with at least ``serial`` and ``state``;
-        additional ``key:value`` fields from ``adb devices -l`` are merged in.
-        """
+        """List connected devices."""
         output = self._run(["devices", "-l"])
         devices: list[dict[str, str]] = []
-        for raw_line in output.split("\n")[1:]:  # skip the "List of devices" header
+        for raw_line in output.split("\n")[1:]:
             line = raw_line.strip()
             if not line:
                 continue
@@ -250,7 +172,7 @@ class ADBController:
         return devices
 
     def connect(self, host: str, port: int = 5555) -> bool:
-        """Connect wirelessly to ``host:port``. Returns True on success."""
+        """Connect to ``host:port``."""
         try:
             result = self._run(["connect", f"{host}:{port}"])
         except ADBError:
@@ -258,7 +180,7 @@ class ADBController:
         return "connected" in result.lower()
 
     def disconnect(self, host: str | None = None) -> bool:
-        """Disconnect a wireless connection. ``host=None`` disconnects all."""
+        """Disconnect wireless (or all)."""
         try:
             if host is not None:
                 self._run(["disconnect", host])
@@ -269,7 +191,7 @@ class ADBController:
         return True
 
     def get_device_info(self) -> DeviceInfo:
-        """Aggregate model, version, screen size, and battery into one snapshot."""
+        """Device info snapshot."""
         model = self._shell("getprop ro.product.model")
         android_ver = self._shell("getprop ro.build.version.release")
         sdk_raw = self._shell("getprop ro.build.version.sdk")
@@ -291,10 +213,9 @@ class ADBController:
             state=DeviceState.DEVICE,
         )
 
-    # ---------------------------------------------------------- app mgmt
 
     def list_packages(self, *, third_party_only: bool = False) -> list[str]:
-        """List installed package names. Pass ``third_party_only=True`` to skip system apps."""
+        """List installed packages."""
         cmd = "pm list packages"
         if third_party_only:
             cmd += " -3"
@@ -308,7 +229,7 @@ class ADBController:
         replace: bool = True,
         grant_permissions: bool = False,
     ) -> bool:
-        """Install an APK file. Returns True on success."""
+        """Install an APK."""
         cmd: list[str] = ["install"]
         if replace:
             cmd.append("-r")
@@ -324,7 +245,7 @@ class ADBController:
         return "success" in result.lower()
 
     def uninstall(self, package: str, *, keep_data: bool = False) -> bool:
-        """Uninstall a package. Returns True on success."""
+        """Uninstall a package."""
         cmd: list[str] = ["uninstall"]
         if keep_data:
             cmd.append("-k")
@@ -337,7 +258,7 @@ class ADBController:
         return "success" in result.lower()
 
     def clear_data(self, package: str) -> bool:
-        """Clear app data. Raises :class:`ValueError` for an unsafe package name."""
+        """Clear app data."""
         _validate_identifier(package, "package")
         try:
             result = self._shell(f"pm clear {package}")
@@ -346,29 +267,28 @@ class ADBController:
         return "success" in result.lower()
 
     def force_stop(self, package: str) -> None:
-        """Force-stop the given package. Raises :class:`ValueError` for an unsafe name."""
+        """Force-stop a package."""
         _validate_identifier(package, "package")
         self._shell(f"am force-stop {package}")
 
     def start_activity(self, package: str, activity: str) -> None:
-        """Start a specific activity by ``package/activity`` name."""
+        """Start an activity."""
         _validate_identifier(package, "package")
         _validate_identifier(activity, "activity")
         self._shell(f"am start -n {package}/{activity}")
 
     def start_app(self, package: str) -> None:
-        """Launch the LAUNCHER activity of a package."""
+        """Launch a package's LAUNCHER activity."""
         _validate_identifier(package, "package")
         self._shell(f"monkey -p {package} -c android.intent.category.LAUNCHER 1")
 
     def get_current_activity(self) -> str:
-        """Return raw `mResumedActivity` line from `dumpsys activity`."""
+        """Return the raw `mResumedActivity` line."""
         return self._shell("dumpsys activity activities | grep mResumedActivity")
 
-    # ---------------------------------------------------------- file ops
 
     def push(self, local_path: str | Path, remote_path: str) -> bool:
-        """Push a file or directory to the device. Returns True on success."""
+        """Push a file or directory to the device."""
         try:
             self._run(["push", str(local_path), remote_path], timeout=TRANSFER_TIMEOUT_S)
         except ADBError as exc:
@@ -377,7 +297,7 @@ class ADBController:
         return True
 
     def pull(self, remote_path: str, local_path: str | Path) -> bool:
-        """Pull a file or directory from the device. Returns True on success."""
+        """Pull a file from the device."""
         try:
             self._run(["pull", remote_path, str(local_path)], timeout=TRANSFER_TIMEOUT_S)
         except ADBError as exc:
@@ -391,18 +311,17 @@ class ADBController:
         return output.split("\n")
 
     def mkdir(self, path: str) -> None:
-        """Create directory (and parents) at ``path``."""
+        """Create a directory (and parents)."""
         self._shell(f"mkdir -p {shlex.quote(path)}")
 
     def rm(self, path: str, *, recursive: bool = False) -> None:
-        """Remove a file (or directory if ``recursive=True``)."""
+        """Remove a file or directory."""
         cmd = "rm -rf" if recursive else "rm"
         self._shell(f"{cmd} {shlex.quote(path)}")
 
-    # ---------------------------------------------------------- screen
 
     def screenshot(self, local_path: str | Path = "screenshot.png") -> bool:
-        """Capture the device screen and write it to ``local_path``."""
+        """Capture the device screen."""
         argv: list[str] = ["adb"]
         if self.device_serial is not None:
             argv.extend(["-s", self.device_serial])
@@ -419,8 +338,6 @@ class ADBController:
             logger.error("Screenshot timed out")
             return False
 
-        # stderr is bytes here (screencap output is binary, so text=True is not
-        # set); decode once for readable log messages.
         raw_err = result.stderr
         stderr = (
             raw_err.decode("utf-8", "replace") if isinstance(raw_err, bytes) else raw_err
@@ -440,8 +357,6 @@ class ADBController:
             )
             return False
         if offset > 0:
-            # Strip a device-emitted warning banner (multi-display foldables) so
-            # the written file is a valid PNG.
             logger.warning("Stripped %d non-PNG byte(s) preceding the screencap image", offset)
             png = png[offset:]
 
@@ -455,7 +370,7 @@ class ADBController:
         time_limit_s: int = 30,
         bit_rate_bps: int = 4_000_000,
     ) -> subprocess.Popen[bytes]:
-        """Start a non-blocking screen recording. Returns the Popen handle."""
+        """Screen recording."""
         argv: list[str] = ["adb"]
         if self.device_serial is not None:
             argv.extend(["-s", self.device_serial])
@@ -467,29 +382,28 @@ class ADBController:
         return subprocess.Popen(argv)
 
     def get_screen_size(self) -> tuple[int, int]:
-        """Return ``(width, height)`` from `wm size`. Returns ``(0, 0)`` if unparseable."""
+        """Return ``(width, height)`` from `wm size`."""
         output = self._shell("wm size")
         match = _SCREEN_SIZE_RE.search(output)
         if match is None:
             return (0, 0)
         return (int(match.group(1)), int(match.group(2)))
 
-    # ---------------------------------------------------------- input
 
     def tap(self, x: int, y: int) -> None:
         """Tap at screen coordinates ``(x, y)``."""
         self._shell(f"input tap {x} {y}")
 
     def swipe(self, x1: int, y1: int, x2: int, y2: int, *, duration_ms: int = 300) -> None:
-        """Swipe from ``(x1, y1)`` to ``(x2, y2)`` over ``duration_ms``."""
+        """Swipe between points."""
         self._shell(f"input swipe {x1} {y1} {x2} {y2} {duration_ms}")
 
     def long_press(self, x: int, y: int, *, duration_ms: int = 1000) -> None:
-        """Long-press at ``(x, y)`` for ``duration_ms``."""
+        """Long-press a point."""
         self._shell(f"input swipe {x} {y} {x} {y} {duration_ms}")
 
     def input_text(self, text: str) -> None:
-        """Type literal text. The text is shell-quoted before being sent."""
+        """Type literal text (shell-quoted)."""
         escaped = shlex.quote(text)
         self._shell(f"input text {escaped}")
 
@@ -522,21 +436,20 @@ class ADBController:
         self.key_event(224)
 
     def scroll_up(self, *, steps: int = 1) -> None:
-        """Scroll up ``steps`` times (swipe down on screen)."""
+        """Scroll up."""
         w, h = self.get_screen_size()
         for _ in range(steps):
             self.swipe(w // 2, h // 4, w // 2, h * 3 // 4, duration_ms=200)
 
     def scroll_down(self, *, steps: int = 1) -> None:
-        """Scroll down ``steps`` times (swipe up on screen)."""
+        """Scroll down."""
         w, h = self.get_screen_size()
         for _ in range(steps):
             self.swipe(w // 2, h * 3 // 4, w // 2, h // 4, duration_ms=200)
 
-    # ---------------------------------------------------------- system info
 
     def get_battery_level(self) -> int:
-        """Return battery level (0-100), or 0 if unparseable."""
+        """Return battery level (0-100)."""
         output = self._shell("dumpsys battery | grep level")
         match = _BATTERY_LEVEL_RE.search(output)
         if match is None:
@@ -544,12 +457,12 @@ class ADBController:
         return int(match.group(1))
 
     def get_property(self, prop: str) -> str:
-        """Return the value of an Android system property (`getprop`)."""
+        """Read an Android property."""
         _validate_identifier(prop, "property")
         return self._shell(f"getprop {prop}")
 
     def set_setting(self, namespace: str, key: str, value: str) -> None:
-        """Set a `Settings` value (e.g. ``set_setting("global", "airplane_mode_on", "1")``)."""
+        '''Set a `Settings` value.'''
         _validate_identifier(namespace, "namespace")
         _validate_identifier(key, "key")
         self._shell(f"settings put {namespace} {key} {shlex.quote(value)}")
@@ -560,10 +473,9 @@ class ADBController:
         _validate_identifier(key, "key")
         return self._shell(f"settings get {namespace} {key}")
 
-    # ---------------------------------------------------------- logcat
 
     def logcat(self, *, lines: int = 100, filter_tag: str | None = None) -> str:
-        """Return the last ``lines`` of logcat, optionally filtered by tag."""
+        """Recent logcat lines, optionally filtered by tag."""
         cmd = "logcat -d"
         if filter_tag is not None:
             if not _TAG_RE.fullmatch(filter_tag):
@@ -576,10 +488,9 @@ class ADBController:
         """Clear the logcat buffer."""
         self._shell("logcat -c")
 
-    # ---------------------------------------------------------- power
 
     def reboot(self, mode: str | None = None) -> None:
-        """Reboot the device. ``mode`` can be ``"recovery"``, ``"bootloader"``, etc."""
+        '''Reboot the device (optionally into ``mode``).'''
         cmd: list[str] = ["reboot"]
         if mode is not None:
             cmd.append(mode)

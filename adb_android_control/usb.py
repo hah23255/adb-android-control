@@ -1,16 +1,4 @@
-"""USB device identification — read the standard 18-byte device descriptor.
-
-Doctrine note
--------------
-- ``parse_device_descriptor`` is a pure function: bytes in, structured
-  result out. Heavily-parametrised property-fuzzable in Phase 3.
-- ``USB_VENDORS`` and ``USB_KNOWN_DEVICES`` are module-level constants
-  documenting the public lookup tables (Law 2: tables are data contracts).
-- The Linux ioctl path lives in :func:`identify_via_ioctl`. It's
-  Linux-only and not unit-tested here — covered by integration when a
-  real USB device is attached.
-"""
-
+"""USB device identification."""
 from __future__ import annotations
 
 import ctypes
@@ -22,9 +10,6 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Lookup tables
-# ---------------------------------------------------------------------------
 
 
 USB_VENDORS: dict[int, str] = {
@@ -65,14 +50,11 @@ USB_KNOWN_DEVICES: dict[tuple[int, int], str] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Pure parser
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class USBDeviceInfo:
-    """Identification extracted from a USB device descriptor."""
+    """Identification from a USB descriptor."""
 
     vid: int
     pid: int
@@ -81,19 +63,12 @@ class USBDeviceInfo:
 
     @property
     def vid_pid(self) -> str:
-        """Canonical ``"vvvv:pppp"`` lowercased hex form."""
+        """``"vvvv:pppp"`` lowercased hex."""
         return f"{self.vid:04x}:{self.pid:04x}"
 
 
 def parse_device_descriptor(data: bytes) -> USBDeviceInfo | None:
-    """Parse the standard 18-byte USB device descriptor.
-
-    Returns ``None`` if ``data`` is shorter than 12 bytes (the minimum
-    needed to read VID at offset 8-9 and PID at offset 10-11). Validates
-    nothing about the prefix bytes — that's the caller's concern.
-
-    Reference: USB 2.0 Specification §9.6.1.
-    """
+    """Parse an 18-byte USB descriptor."""
     if len(data) < 12:
         return None
     vid = data[8] | (data[9] << 8)
@@ -106,18 +81,10 @@ def parse_device_descriptor(data: bytes) -> USBDeviceInfo | None:
     )
 
 
-# ---------------------------------------------------------------------------
-# I/O paths (file-fd and ioctl) — thin wrappers around the parser
-# ---------------------------------------------------------------------------
 
 
 def identify_via_fd(fd: int) -> USBDeviceInfo | None:
-    """Read 18 bytes from ``fd`` and parse them as a USB device descriptor.
-
-    This is the path used by ``termux-usb -e`` callbacks: the Termux app
-    opens the device, calls back with a file descriptor, and we just
-    ``os.read`` the descriptor bytes.
-    """
+    """Read 18 bytes from ``fd`` and parse."""
     try:
         data = os.read(fd, 18)
     except OSError as exc:
@@ -126,13 +93,12 @@ def identify_via_fd(fd: int) -> USBDeviceInfo | None:
     return parse_device_descriptor(data)
 
 
-# USBDEVFS ioctl constant — Linux-specific.
-# Source: linux/usb/usbdevice_fs.h
+# USBDEVFS ioctl constant.
 _USBDEVFS_CONTROL = 0xC0185500
 
 
 class _CtrlTransfer(ctypes.Structure):
-    """Mirrors `struct usbdevfs_ctrltransfer` from <linux/usb/usbdevice_fs.h>."""
+    """Mirrors `struct usbdevfs_ctrltransfer`."""
 
     _fields_ = (
         ("bRequestType", ctypes.c_uint8),
@@ -146,17 +112,13 @@ class _CtrlTransfer(ctypes.Structure):
 
 
 def identify_via_ioctl(fd: int) -> USBDeviceInfo | None:
-    """Issue a USBDEVFS_CONTROL ioctl to retrieve the device descriptor.
-
-    Linux-only. Returns ``None`` on any error. NOT unit-tested here —
-    integration coverage requires a real attached USB device.
-    """
+    """USBDEVFS_CONTROL ioctl read."""
     try:
         data = ctypes.create_string_buffer(18)
         ctrl = _CtrlTransfer()
-        ctrl.bRequestType = 0x80  # USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE
-        ctrl.bRequest = 0x06  # USB_REQ_GET_DESCRIPTOR
-        ctrl.wValue = 0x0100  # USB_DT_DEVICE << 8
+        ctrl.bRequestType = 0x80  # USB_DIR_IN | STANDARD | DEVICE
+        ctrl.bRequest = 0x06  # GET_DESCRIPTOR
+        ctrl.wValue = 0x0100  # DEVICE descriptor
         ctrl.wIndex = 0
         ctrl.wLength = 18
         ctrl.timeout = 1000

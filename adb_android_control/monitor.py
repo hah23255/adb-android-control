@@ -1,25 +1,4 @@
-"""Real-time monitoring: logcat streaming, performance snapshots, crashes.
-
-Doctrine note
--------------
-This module composes against the public :class:`adb_android_control.controller.ADBController`
-API only — never against ``_shell`` / ``_run``. The controller exposes
-:meth:`ADBController.shell` for module-friendly shell access.
-
-The streaming primitives (logcat, getevent) use ``subprocess.Popen``
-directly because they need long-lived stdout pipes that don't fit
-``ADBController._run``'s capture-and-return pattern. This is the one
-deliberate carve-out from Law 2 in this module — flagged.
-
-Testability
------------
-- :meth:`LogcatMonitor.parse_log_line` is a pure ``@staticmethod`` so it
-  can be unit-tested without spinning up subprocesses or threads.
-- :class:`PerformanceMonitor` accepts an injected
-  :class:`ADBController` so tests can pass a Poison-Pill-mocked instance.
-- ``time.sleep`` and threading-based monitors are NOT covered by unit
-  tests — those are integration-test territory (Phase 3).
-"""
+"""Real-time logcat, performance, crash monitoring."""
 
 from __future__ import annotations
 
@@ -45,17 +24,11 @@ from adb_android_control.controller import ADBController
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Value types
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class LogEntry:
-    """One parsed logcat line.
-
-    Frozen so a test fixture can be safely shared (Doctrine Law 5).
-    """
+    """One parsed logcat line."""
 
     timestamp: str
     pid: int
@@ -68,7 +41,7 @@ class LogEntry:
 
 @dataclass(frozen=True)
 class PerformanceSnapshot:
-    """Aggregated device-performance reading at a point in time."""
+    """Performance reading at a point in time."""
 
     timestamp: datetime
     battery_level: int
@@ -81,7 +54,7 @@ class PerformanceSnapshot:
 
 @dataclass(frozen=True)
 class CrashEvent:
-    """One detected crash from the logcat stream."""
+    """A crash detected in logcat."""
 
     timestamp: str
     tag: str
@@ -89,29 +62,19 @@ class CrashEvent:
     level: str
 
 
-# ---------------------------------------------------------------------------
-# Logcat
-# ---------------------------------------------------------------------------
 
 
 _LOGCAT_LINE_RE = re.compile(
     r"^(\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+)"  # timestamp
     r"\s+(\d+)\s+(\d+)"  # pid, tid
-    r"\s+([A-Z])"  # level — accept any uppercase
-    r"\s+([^:]+):"  # tag    letter so non-standard
-    r"\s*(.*)$"  # message  letters (e.g. some
-)  # vendor adb builds emit X)
-# are passed through rather
-# than dropped (Adaptive
-# Fault Tolerance pattern).
+    r"\s+([A-Z])"  # level
+    r"\s+([^:]+):"  # tag
+    r"\s*(.*)$"  # message
+)
 
 
 class LogcatMonitor:
-    """Stream and parse logcat output asynchronously.
-
-    The streaming subprocess and queue are owned by this instance; you
-    must call :meth:`stop` (or use it as a context manager) to clean up.
-    """
+    """Stream and parse logcat asynchronously."""
 
     LEVELS: ClassVar[dict[str, str]] = {
         "V": "VERBOSE",
@@ -131,12 +94,7 @@ class LogcatMonitor:
 
     @staticmethod
     def parse_log_line(line: str) -> LogEntry | None:
-        """Parse a single logcat line into a :class:`LogEntry`, or ``None``.
-
-        Pure function — no I/O, no instance state. Unit tests call this
-        directly to verify parser behaviour without spinning up a
-        subprocess.
-        """
+        """Parse one logcat line into a :class:`LogEntry`."""
         match = _LOGCAT_LINE_RE.match(line)
         if match is None:
             return None
@@ -157,10 +115,7 @@ class LogcatMonitor:
         filter_level: str = "V",
         filter_tags: list[str] | None = None,
     ) -> None:
-        """Spawn the logcat subprocess and begin streaming.
-
-        Idempotent: a second call while running is a no-op.
-        """
+        """Spawn logcat and begin streaming."""
         if self.running:
             return
 
@@ -186,7 +141,7 @@ class LogcatMonitor:
         self._thread.start()
 
     def _read_loop(self) -> None:
-        """Drain ``stdout`` into ``log_queue`` until the subprocess closes."""
+        """Drain ``stdout`` into ``log_queue``."""
         if self.process is None or self.process.stdout is None:
             return
         while self.running:
@@ -198,7 +153,7 @@ class LogcatMonitor:
                 self.log_queue.put(entry)
 
     def stop(self) -> None:
-        """Terminate the subprocess and reset state."""
+        """Terminate the subprocess and reset."""
         self.running = False
         if self.process is not None:
             self.process.terminate()
@@ -206,7 +161,7 @@ class LogcatMonitor:
             self.process = None
 
     def get_logs(self, max_count: int = 100) -> list[LogEntry]:
-        """Drain up to ``max_count`` queued entries (non-blocking)."""
+        """Drain up to ``max_count`` queued entries."""
         logs: list[LogEntry] = []
         while not self.log_queue.empty() and len(logs) < max_count:
             try:
@@ -221,7 +176,7 @@ class LogcatMonitor:
         *,
         filter_level: str = "V",
     ) -> None:
-        """Block-stream logs to ``callback``. Stops on KeyboardInterrupt."""
+        """Block-stream logs to ``callback``."""
         self.start(filter_level=filter_level)
         try:
             while self.running:
@@ -231,30 +186,19 @@ class LogcatMonitor:
                     continue
                 callback(entry)
         except KeyboardInterrupt:
-            # Ctrl-C is the expected way to end a blocking stream; teardown
-            # happens in `finally`, so nothing to do here.
-            pass
+            pass  # Ctrl-C ends the stream; cleanup in `finally`
         finally:
             self.stop()
 
 
-# ---------------------------------------------------------------------------
-# Performance
-# ---------------------------------------------------------------------------
 
 
-# Match the first percentage value on a CPU-grepped line. The shell pipeline
-# already filters to CPU lines via `grep -E 'CPU|cpu'`, so the regex does not
-# need to re-validate the keyword. This accepts both real Android top format
-# (`80%user 0%nice 50%sys`) and userland tools that emit `user 23.5%` order.
+# Accepts `80%user` and `user 23.5%` formats.
 _CPU_PCT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 _MEMINFO_KB_RE = re.compile(r"(\d+)")
 _DISK_PCT_RE = re.compile(r"(\d+)%")
 
-# Device shell commands issued by the performance probes. Kept as module-level
-# constants so tests reference the exact same string the production code sends
-# (a whitespace/quoting drift between the two silently sent every snapshot's
-# reading to the graceful-degradation 0.0 path — see issue #7).
+# Module-level so tests probe with the same commands.
 _CPU_PROBE_CMD = "top -n 1 -b | grep -E 'CPU|cpu' | head -1"
 _MEMORY_PROBE_CMD = "cat /proc/meminfo | head -3"
 _DISK_PROBE_CMD = "df /data | tail -1"
@@ -262,12 +206,7 @@ _PROCESS_COUNT_PROBE_CMD = "ps -A | wc -l"
 
 
 class PerformanceMonitor:
-    """Periodic device-performance snapshots.
-
-    Dependency-injection note: pass an existing :class:`ADBController` if
-    you've already constructed one (saves the eager ``adb version`` probe);
-    otherwise one is created here.
-    """
+    """Periodic device-performance snapshots."""
 
     def __init__(
         self,
@@ -280,12 +219,7 @@ class PerformanceMonitor:
         self.snapshots: list[PerformanceSnapshot] = []
 
     def take_snapshot(self) -> PerformanceSnapshot:
-        """Compose a snapshot from the four device queries. Always succeeds.
-
-        Each underlying query is best-effort; degraded values fall back to
-        ``0`` rather than raising, because the snapshot's value is *trend
-        over time* — one bad reading shouldn't kill the monitoring loop.
-        """
+        """Compose a snapshot from device queries."""
         memory = self._get_memory()
         snapshot = PerformanceSnapshot(
             timestamp=datetime.now(tz=timezone.utc),
@@ -299,7 +233,6 @@ class PerformanceMonitor:
         self.snapshots.append(snapshot)
         return snapshot
 
-    # -- individual probes ---------------------------------------------------
 
     def _get_battery(self) -> int:
         return self.adb.get_battery_level()
@@ -307,7 +240,7 @@ class PerformanceMonitor:
     def _get_cpu_usage(self) -> float:
         try:
             output = self.adb.shell(_CPU_PROBE_CMD)
-        except Exception:  # noqa: BLE001 — degraded path: any failure → 0
+        except Exception:  # noqa: BLE001 — any failure → 0
             return 0.0
         match = _CPU_PCT_RE.search(output)
         return float(match.group(1)) if match else 0.0
@@ -347,7 +280,6 @@ class PerformanceMonitor:
         except ValueError:
             return 0
 
-    # -- monitoring loop -----------------------------------------------------
 
     def start_monitoring(
         self,
@@ -355,7 +287,7 @@ class PerformanceMonitor:
         interval_s: float = 5.0,
         callback: Callable[[PerformanceSnapshot], None] | None = None,
     ) -> None:
-        """Block-loop ``take_snapshot`` every ``interval_s`` until ``stop_monitoring``."""
+        """Snapshot every ``interval_s``."""
         self.running = True
         while self.running:
             snapshot = self.take_snapshot()
@@ -364,11 +296,11 @@ class PerformanceMonitor:
             time.sleep(interval_s)
 
     def stop_monitoring(self) -> None:
-        """Signal the loop to exit at the top of its next iteration."""
+        """Signal the loop to exit."""
         self.running = False
 
     def export_snapshots(self, filepath: str | Path) -> None:
-        """Dump :attr:`snapshots` as JSON to ``filepath``."""
+        """Dump snapshots as JSON to ``filepath``."""
         data = [
             {
                 "timestamp": s.timestamp.isoformat(),
@@ -384,13 +316,11 @@ class PerformanceMonitor:
         Path(filepath).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
 # Events (input devices)
-# ---------------------------------------------------------------------------
 
 
 class EventMonitor:
-    """Capture raw input events from a /dev/input/eventN device."""
+    """Capture raw input events from an input device."""
 
     def __init__(
         self,
@@ -408,7 +338,7 @@ class EventMonitor:
         *,
         callback: Callable[[str], None] | None = None,
     ) -> None:
-        """Stream getevent output. Blocks until SIGINT or :meth:`stop`."""
+        """Stream getevent; blocks until stopped."""
         cmd: list[str] = ["adb"]
         if self.adb.device_serial is not None:
             cmd.extend(["-s", self.adb.device_serial])
@@ -433,8 +363,7 @@ class EventMonitor:
                 else:
                     print(stripped)  # noqa: T201
         except KeyboardInterrupt:
-            # Ctrl-C is the expected way to end the capture loop; teardown
-            # happens in `finally`, so nothing to do here.
+            # Ctrl-C ends the capture; teardown is in `finally`.
             pass
         finally:
             self.stop()
@@ -448,9 +377,7 @@ class EventMonitor:
             self.process = None
 
 
-# ---------------------------------------------------------------------------
 # Crashes
-# ---------------------------------------------------------------------------
 
 
 _CRASH_KEYWORDS: tuple[str, ...] = (
@@ -463,11 +390,7 @@ _CRASH_KEYWORDS: tuple[str, ...] = (
 
 
 class CrashMonitor:
-    """Watch the logcat stream for crash-class log entries.
-
-    Composition over inheritance: holds a :class:`LogcatMonitor` rather
-    than extending it, so the two have independent lifecycles.
-    """
+    """Watch logcat for crash-class entries."""
 
     def __init__(self, device_serial: str | None = None) -> None:
         self.logcat: LogcatMonitor = LogcatMonitor(device_serial)
@@ -475,14 +398,14 @@ class CrashMonitor:
 
     @staticmethod
     def is_crash_entry(entry: LogEntry) -> bool:
-        """Pure predicate — testable in isolation."""
+        """Pure predicate."""
         if entry.level not in ("ERROR", "FATAL"):
             return False
         msg_lower = entry.message.lower()
         return any(keyword in msg_lower for keyword in _CRASH_KEYWORDS)
 
     def start(self, *, callback: Callable[[CrashEvent], None] | None = None) -> None:
-        """Start streaming and capture crashes. Blocking."""
+        """Start streaming and capturing crashes."""
 
         def _on_entry(entry: LogEntry) -> None:
             if not self.is_crash_entry(entry):
@@ -504,5 +427,5 @@ class CrashMonitor:
         self.logcat.stop()
 
     def get_crashes(self) -> list[CrashEvent]:
-        """Return a defensive copy of recorded crashes."""
+        """Return a defensive copy of crashes."""
         return list(self.crashes)

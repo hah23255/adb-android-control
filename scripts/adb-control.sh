@@ -1,8 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ADB Control - Manage ADB auto-connect and monitor
-# Usage: adb-control [start|stop|status|restart|scan|log]
+# Usage: adb-control [start|stop|status|restart|scan|log|monitor]
 
-SKILL_DIR="$HOME/.claude/skills/adb-android-control"
 MONITOR_PID_FILE="$HOME/.adb_monitor.pid"
 LOGFILE="$HOME/.adb_connect.log"
 MONITOR_LOG="$HOME/.adb_monitor.log"
@@ -21,7 +20,7 @@ start_monitor() {
         fi
     fi
 
-    nohup python3 "$SKILL_DIR/scripts/connection_monitor.py" run 30 >> "$MONITOR_LOG" 2>&1 &
+    nohup adb-control connection run -i 30 >> "$MONITOR_LOG" 2>&1 &
     echo $! > "$MONITOR_PID_FILE"
     echo -e "${GREEN}Monitor started (PID: $!)${NC}"
 }
@@ -45,14 +44,12 @@ status() {
     echo "=== ADB Control Status ==="
     echo ""
 
-    # ADB devices
     echo "ADB Devices:"
     adb devices -l 2>/dev/null | grep -v "^List" | while read line; do
         [ -n "$line" ] && echo "  $line"
     done
     echo ""
 
-    # Auto-connect service
     echo -n "Auto-connect service: "
     if sv status adb-autoconnect 2>/dev/null | grep -q "run:"; then
         echo -e "${GREEN}running${NC}"
@@ -60,7 +57,6 @@ status() {
         echo -e "${RED}stopped${NC}"
     fi
 
-    # Monitor
     echo -n "Connection monitor:   "
     if [ -f "$MONITOR_PID_FILE" ]; then
         pid=$(cat "$MONITOR_PID_FILE")
@@ -73,16 +69,19 @@ status() {
         echo -e "${RED}stopped${NC}"
     fi
 
-    # Current connection
     echo ""
-    python3 "$SKILL_DIR/scripts/connection_monitor.py" status 2>/dev/null
+    adb-control connection status 2>/dev/null
 }
 
 scan() {
     source ~/.adb_devices 2>/dev/null
-    ip="${ZFOLD7%%:*}"
-    echo "Scanning $ip for ADB port..."
-    python3 "$SKILL_DIR/scripts/adb_port_scan.py" "$ip" 30000 50000
+    while IFS='=' read -r name addr; do
+        [[ "$name" =~ ^#.*$ ]] && continue
+        [[ -z "$addr" ]] && continue
+        ip="${addr%%:*}"
+        echo "Scanning $ip for ADB port..."
+        adb-control scan-port "$ip"
+    done < ~/.adb_devices 2>/dev/null
 }
 
 show_log() {
@@ -119,8 +118,7 @@ case "${1:-status}" in
         show_log "${2:-50}"
         ;;
     monitor)
-        # Run monitor in foreground
-        python3 "$SKILL_DIR/scripts/connection_monitor.py" run "${2:-10}"
+        adb-control connection run -i "${2:-10}"
         ;;
     *)
         echo "Usage: adb-control [start|stop|status|restart|scan|log|monitor]"

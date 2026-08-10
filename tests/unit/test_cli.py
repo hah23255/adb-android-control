@@ -41,6 +41,7 @@ class TestArgparseLayout:
             "radio",
             "connection",
             "scan-port",
+            "connect",
         }
 
     def test_version_flag_prints_package_version(self, capsys: pytest.CaptureFixture[str]) -> None:

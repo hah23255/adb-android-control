@@ -1,20 +1,4 @@
-"""Wi-Fi and Bluetooth radio scanning via ADB ``dumpsys`` and Termux API.
-
-Doctrine note
--------------
-Pure helpers (``freq_to_channel``, ``freq_to_band``, ``rssi_to_quality``)
-are module-level functions — directly unit-testable without any I/O
-(Doctrine Law 9: one concept per test).
-
-The :class:`RadioScanner` class composes against the public
-:meth:`ADBController.shell` API (Law 2) and accepts an injected
-controller for test isolation (Law 5).
-
-The Termux API path (``termux-wifi-connectioninfo``) uses ``subprocess.run``
-directly because it is *not* an ADB call — it talks to the Termux app
-over a local UNIX socket. ``shell=True`` is avoided everywhere; argv
-form only.
-"""
+"""Wi-Fi/BT radio scanning via ADB/Termux."""
 
 from __future__ import annotations
 
@@ -30,53 +14,26 @@ from adb_android_control.controller import ADBController
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Pure helpers (no I/O, fully testable in isolation)
-# ---------------------------------------------------------------------------
 
 
 def freq_to_channel(freq_mhz: int) -> int:
-    """Convert Wi-Fi frequency (MHz) to IEEE 802.11 channel number.
-
-    Returns ``0`` if the frequency is not on the canonical channel-center
-    grid for any supported band.
-
-    The function validates *alignment* to the per-band 5 MHz grid in
-    addition to the per-band frequency range. Off-grid inputs (gap-band
-    frequencies, sub-MHz offsets) return ``0`` rather than a fictional
-    channel number — see issue #4.
-
-    Channel plans:
-
-    - 2.4 GHz: channels 1-13 at ``2412 + 5 * (n - 1)`` MHz; channel 14
-      alone at 2484 MHz. Frequencies 2473-2483 are the 12 MHz gap and
-      have no channel.
-    - 5 GHz: ``channel = (freq - 5000) / 5``; valid centers fall in
-      ``[5170, 5825]`` (channels 34-165).
-    - 6 GHz: channels 1, 5, 9, ..., 233 at ``5955 + 5 * (n - 1)`` MHz.
-    """
-    # 2.4 GHz: channels 1-13 at 2412+5*(n-1) MHz; channel 14 alone at 2484.
+    """Convert Wi-Fi MHz to a channel number."""
+    # 2.4 GHz: ch 1-13 at 2412+5n; ch 14 at 2484.
     if 2412 <= freq_mhz <= 2472 and (freq_mhz - 2412) % 5 == 0:
         return (freq_mhz - 2412) // 5 + 1
     if freq_mhz == 2484:
         return 14
-    # 5 GHz: channel = (freq - 5000) / 5; valid in [5170, 5825].
+    # 5 GHz: ch = (f-5000)/5 in [5170, 5825].
     if 5170 <= freq_mhz <= 5825 and (freq_mhz - 5000) % 5 == 0:
         return (freq_mhz - 5000) // 5
-    # 6 GHz: channels 1, 5, 9, ..., 233 at 5955+5*(n-1) MHz.
+    # 6 GHz: ch 1,5,... at 5955+5n.
     if 5955 <= freq_mhz <= 7115 and (freq_mhz - 5955) % 5 == 0:
         return (freq_mhz - 5955) // 5 + 1
     return 0
 
 
 def freq_to_band(freq_mhz: int) -> str:
-    """Convert Wi-Fi frequency (MHz) to band name.
-
-    Permissive by design: any frequency inside a band's overall envelope
-    returns the band string, even if it is not on the canonical
-    channel-center grid. Band classification is a coarser concept than
-    channel number — see :func:`freq_to_channel` for the strict mapping.
-    """
+    """Convert Wi-Fi MHz to a band name."""
     if 2400 <= freq_mhz <= 2500:
         return "2.4GHz"
     if 5150 <= freq_mhz <= 5850:
@@ -87,7 +44,7 @@ def freq_to_band(freq_mhz: int) -> str:
 
 
 def rssi_to_quality(rssi_dbm: int) -> str:
-    """Convert RSSI in dBm to a qualitative description."""
+    """Convert RSSI (dBm) to a description."""
     if rssi_dbm >= -50:
         return "Excellent"
     if rssi_dbm >= -60:
@@ -99,14 +56,11 @@ def rssi_to_quality(rssi_dbm: int) -> str:
     return "Poor"
 
 
-# ---------------------------------------------------------------------------
-# Value types
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class WiFiInfo:
-    """Snapshot of the device's current Wi-Fi connection."""
+    """Current Wi-Fi connection snapshot."""
 
     ssid: str
     bssid: str
@@ -125,7 +79,7 @@ class WiFiInfo:
 
 @dataclass(frozen=True)
 class BluetoothInfo:
-    """Bluetooth adapter status and connected devices."""
+    """BT adapter status."""
 
     enabled: bool
     name: str
@@ -134,9 +88,6 @@ class BluetoothInfo:
     connected_devices: tuple[dict[str, str], ...] = field(default_factory=tuple)
 
 
-# ---------------------------------------------------------------------------
-# Parser regexes (compiled once)
-# ---------------------------------------------------------------------------
 
 
 _WIFI_INFO_RE = re.compile(
@@ -156,13 +107,10 @@ _BT_DEVICE_RE = re.compile(r"([0-9A-Fa-f:]{17})\s*(\S+)?")
 _LINK_STATS_RE = re.compile(r"tx=([0-9.]+),\s*([0-9.]+),\s*([0-9.]+)\s+rx=([0-9.]+)")
 
 
-# ---------------------------------------------------------------------------
-# Parsers (pure-ish — string in, structured out)
-# ---------------------------------------------------------------------------
 
 
 def parse_wifi_info(dumpsys_output: str) -> WiFiInfo | None:
-    """Parse the `mWifiInfo` line of ``dumpsys wifi`` into :class:`WiFiInfo`."""
+    """Parse `dumpsys wifi` mWifiInfo into :class:`WiFiInfo`."""
     if not dumpsys_output:
         return None
     match = _WIFI_INFO_RE.search(dumpsys_output)
@@ -184,10 +132,7 @@ def parse_wifi_info(dumpsys_output: str) -> WiFiInfo | None:
 
 
 def parse_scan_results(scan_output: str) -> list[dict[str, Any]]:
-    """Parse output of ``cmd wifi list-scan-results`` into network dicts.
-
-    Sorted by RSSI descending (strongest first).
-    """
+    """Parse scan results into network dicts."""
     networks: list[dict[str, Any]] = []
     for line in scan_output.split("\n"):
         match = _SCAN_RESULT_RE.search(line)
@@ -209,7 +154,7 @@ def parse_scan_results(scan_output: str) -> list[dict[str, Any]]:
 
 
 def parse_bluetooth_info(dumpsys_output: str) -> BluetoothInfo:
-    """Parse `dumpsys bluetooth_manager` head into :class:`BluetoothInfo`."""
+    """Parse BT adapter state."""
     enabled = "enabled: true" in dumpsys_output
     state_match = _BT_STATE_RE.search(dumpsys_output)
     name_match = _BT_NAME_RE.search(dumpsys_output)
@@ -223,7 +168,7 @@ def parse_bluetooth_info(dumpsys_output: str) -> BluetoothInfo:
 
 
 def parse_bluetooth_devices(dumpsys_output: str) -> list[dict[str, str]]:
-    """Parse the `Connected devices` block into address/name records."""
+    """Parse the Connected-devices block."""
     return [
         {"address": match.group(1), "name": match.group(2) or "Unknown"}
         for match in _BT_DEVICE_RE.finditer(dumpsys_output)
@@ -231,7 +176,7 @@ def parse_bluetooth_devices(dumpsys_output: str) -> list[dict[str, str]]:
 
 
 def parse_link_stats(stats_output: str) -> dict[str, float]:
-    """Parse `tx=A,B,C rx=D` line from `dumpsys wifi` into a stats dict."""
+    """Parse a tx/rx link-stats line."""
     match = _LINK_STATS_RE.search(stats_output)
     if match is None:
         return {}
@@ -243,17 +188,10 @@ def parse_link_stats(stats_output: str) -> dict[str, float]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Scanner — the I/O-touching surface
-# ---------------------------------------------------------------------------
 
 
 class RadioScanner:
-    """Aggregate Wi-Fi/Bluetooth/radio probes via ADB and Termux API.
-
-    Pass an existing :class:`ADBController` via ``adb=`` for test injection;
-    otherwise one is constructed eagerly.
-    """
+    """Wi-Fi/BT/radio probes."""
 
     def __init__(
         self,
@@ -263,11 +201,10 @@ class RadioScanner:
     ) -> None:
         self.adb: ADBController = adb if adb is not None else ADBController(device_serial)
 
-    # -- Wi-Fi (host-side Termux API) ---------------------------------------
 
     @staticmethod
     def get_wifi_via_termux() -> dict[str, Any] | None:
-        """Call ``termux-wifi-connectioninfo`` and parse its JSON. ``None`` on failure."""
+        """Termux Wi-Fi info; None on failure."""
         try:
             result = subprocess.run(
                 ["termux-wifi-connectioninfo"],
@@ -286,10 +223,9 @@ class RadioScanner:
             return None
         return data if isinstance(data, dict) else None
 
-    # -- Wi-Fi (ADB) --------------------------------------------------------
 
     def get_wifi(self) -> WiFiInfo | None:
-        """Read the current Wi-Fi connection via ADB ``dumpsys wifi``."""
+        """Current Wi-Fi via ``dumpsys wifi``."""
         try:
             output = self.adb.shell("dumpsys wifi | grep -E 'mWifiInfo|score=' | head -5")
         except Exception as exc:  # noqa: BLE001 — internal lesson (adaptive fault tolerance)
@@ -298,7 +234,7 @@ class RadioScanner:
         return parse_wifi_info(output)
 
     def scan_wifi(self) -> list[dict[str, Any]]:
-        """Run a Wi-Fi scan and return networks (sorted by RSSI desc)."""
+        """Wi-Fi scan results."""
         try:
             output = self.adb.shell("cmd wifi list-scan-results", timeout=15)
         except Exception as exc:  # noqa: BLE001
@@ -307,7 +243,7 @@ class RadioScanner:
         return parse_scan_results(output)
 
     def get_link_stats(self) -> dict[str, float]:
-        """Pull tx/rx link-layer statistics from ``dumpsys wifi``."""
+        """Tx/rx link stats."""
         try:
             output = self.adb.shell("dumpsys wifi | grep -E 'tx=|rx=|bcn=' | head -5")
         except Exception as exc:  # noqa: BLE001
@@ -315,10 +251,9 @@ class RadioScanner:
             return {}
         return parse_link_stats(output)
 
-    # -- Bluetooth -----------------------------------------------------------
 
     def get_bluetooth(self) -> BluetoothInfo | None:
-        """Read Bluetooth adapter state via ``dumpsys bluetooth_manager``."""
+        """BT adapter state."""
         try:
             output = self.adb.shell("dumpsys bluetooth_manager | head -50")
         except Exception as exc:  # noqa: BLE001
@@ -327,7 +262,7 @@ class RadioScanner:
         return parse_bluetooth_info(output)
 
     def get_bluetooth_devices(self) -> list[dict[str, str]]:
-        """Pull connected Bluetooth devices via ``dumpsys bluetooth_manager``."""
+        """Connected BT devices."""
         try:
             output = self.adb.shell("dumpsys bluetooth_manager | grep -A2 'Connected devices'")
         except Exception as exc:  # noqa: BLE001
@@ -335,10 +270,9 @@ class RadioScanner:
             return []
         return parse_bluetooth_devices(output)
 
-    # -- Radio capabilities -------------------------------------------------
 
     def get_capabilities(self) -> dict[str, Any]:
-        """Aggregate features, MIMO support, and supported channel lists."""
+        """Radio features and channels."""
         try:
             features_output = self.adb.shell(
                 "dumpsys wifi | grep -i 'SupportedFeatures\\|MIMO\\|antenna\\|band' | head -10"

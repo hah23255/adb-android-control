@@ -1,16 +1,4 @@
-"""Watch ADB / Wi-Fi connection state over time and react to changes.
-
-Doctrine note
--------------
-- ``detect_changes`` is a pure function: takes two states, returns the
-  diff. Doctrine Law 9 — one concept per test target.
-- I/O dependencies (state-file read/write, notifications, sleep) are
-  injectable via constructor parameters so tests can substitute fakes.
-- This module is the **race-condition surface** of the package — Phase 3
-  will add Hypothesis property tests and concurrent-state tests here.
-- The continuous ``run()`` loop is intentionally not unit-tested in
-  this batch; integration coverage lands in Phase 3.
-"""
+"""Watch ADB/Wi-Fi state over time and react to changes."""
 
 from __future__ import annotations
 
@@ -32,18 +20,15 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Indirections so tests can monkey-patch without touching real time.
+# _sleep indirection for test patching.
 _sleep: Callable[[float], None] = time.sleep
 
 
-# ---------------------------------------------------------------------------
-# Value types
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class ConnectionState:
-    """Snapshot of ADB+Wi-Fi state at a moment in time."""
+    """ADB+Wi-Fi state at a moment in time."""
 
     timestamp: str
     connected: bool
@@ -55,7 +40,7 @@ class ConnectionState:
 
 
 class ChangeType(Enum):
-    """Kinds of state transitions ``detect_changes`` can report."""
+    """State transitions ``detect_changes`` can report."""
 
     CONNECTED = "CONNECTED"
     DISCONNECTED = "DISCONNECTED"
@@ -67,7 +52,7 @@ class ChangeType(Enum):
 
 @dataclass(frozen=True)
 class Change:
-    """A single observed change between two states."""
+    """A change between two states."""
 
     kind: ChangeType
     detail: str
@@ -77,9 +62,6 @@ class Change:
 SIGNAL_CHANGE_DB_THRESHOLD = 10
 
 
-# ---------------------------------------------------------------------------
-# Pure detection logic (no I/O — testable in isolation)
-# ---------------------------------------------------------------------------
 
 
 def detect_changes(
@@ -88,10 +70,7 @@ def detect_changes(
     *,
     signal_threshold_db: int = SIGNAL_CHANGE_DB_THRESHOLD,
 ) -> list[Change]:
-    """Compute the list of :class:`Change` items between two states.
-
-    Pure function: no I/O, no clock, no exceptions. Doctrine Law 9.
-    """
+    """Diff two states into :class:`Change` items."""
     changes: list[Change] = []
 
     if last is None:
@@ -127,16 +106,10 @@ def detect_changes(
     return changes
 
 
-# ---------------------------------------------------------------------------
-# adb / termux probes (small, standalone — DI'd in the monitor class)
-# ---------------------------------------------------------------------------
 
 
 def parse_adb_devices(output: str) -> tuple[bool, str, int]:
-    """Parse `adb devices` output into ``(connected, ip, port)``.
-
-    Returns ``(False, "", 0)`` if no host:port-style device line is present.
-    """
+    """Parse ``adb devices`` into ``(connected, ip, port)``."""
     for line in output.split("\n"):
         if "\tdevice" not in line:
             continue
@@ -152,7 +125,7 @@ def parse_adb_devices(output: str) -> tuple[bool, str, int]:
 
 
 def fetch_adb_status(timeout_s: int = 5) -> tuple[bool, str, int]:
-    """Run ``adb devices`` and parse the result. Returns sane defaults on failure."""
+    """Run ``adb devices``; sane defaults on failure."""
     try:
         result = subprocess.run(
             ["adb", "devices"],
@@ -189,13 +162,10 @@ def fetch_wifi_info(timeout_s: int = 5) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-# ---------------------------------------------------------------------------
-# Notifier interface (testable via injection)
-# ---------------------------------------------------------------------------
 
 
 def termux_notifier(title: str, message: str) -> None:
-    """Default notifier — invokes ``termux-notification``. Silent on failure."""
+    """Notify via ``termux-notification``; silent on failure."""
     with contextlib.suppress(FileNotFoundError, subprocess.TimeoutExpired):
         subprocess.run(
             [
@@ -213,12 +183,9 @@ def termux_notifier(title: str, message: str) -> None:
 
 
 def null_notifier(_title: str, _message: str) -> None:
-    """No-op notifier — useful in tests."""
+    """No-op notifier for tests."""
 
 
-# ---------------------------------------------------------------------------
-# Connection monitor
-# ---------------------------------------------------------------------------
 
 
 # Change kinds that should trigger a user-facing notification by default
@@ -228,12 +195,7 @@ _NOTIFY_ON_KINDS: frozenset[ChangeType] = frozenset(
 
 
 class ConnectionMonitor:
-    """Stateful monitor that compares each new probe to the previous saved state.
-
-    Paths (config / log / state) and the I/O probes are all injectable
-    so tests can drive the monitor with a fake clock, fake subprocess,
-    and a tmp_path filesystem.
-    """
+    """Stateful probe comparator over time."""
 
     def __init__(
         self,
@@ -259,7 +221,6 @@ class ConnectionMonitor:
         self.last_state: ConnectionState | None = None
         self._load_state()
 
-    # -- state persistence ---------------------------------------------------
 
     def _load_state(self) -> None:
         if not self.state_file.exists():
@@ -272,7 +233,7 @@ class ConnectionMonitor:
             self.last_state = None
 
     def save_state(self, state: ConnectionState) -> None:
-        """Atomically persist ``state`` to ``state_file``."""
+        """Persist ``state`` to ``state_file``."""
         payload = {
             "timestamp": state.timestamp,
             "connected": state.connected,
@@ -284,10 +245,9 @@ class ConnectionMonitor:
         }
         self.state_file.write_text(json.dumps(payload), encoding="utf-8")
 
-    # -- logging -------------------------------------------------------------
 
     def log(self, msg: str) -> None:
-        """Append a timestamped line to the log file (and stdout)."""
+        """Log a timestamped line to file and stdout."""
         ts = self._now_fn().strftime("%Y-%m-%d %H:%M:%S")
         line = f"{ts} {msg}"
         print(line)  # noqa: T201
@@ -295,10 +255,9 @@ class ConnectionMonitor:
         with self.log_file.open("a", encoding="utf-8") as f:
             f.write(line + "\n")
 
-    # -- probes --------------------------------------------------------------
 
     def get_current_state(self) -> ConnectionState:
-        """Compose the current ADB+Wi-Fi state from the injected probes."""
+        """Compose the current state from probes."""
         wifi = self._wifi_info_fn()
         connected, ip, port = self._adb_status_fn()
         return ConnectionState(
@@ -311,10 +270,9 @@ class ConnectionMonitor:
             frequency_mhz=int(wifi.get("frequency_mhz", 0)),
         )
 
-    # -- config rewrite ------------------------------------------------------
 
     def update_config(self, ip: str, port: int) -> None:
-        """Rewrite ``~/.adb_devices`` to point matching entries at the new port."""
+        """Rewrite matching ``~/.adb_devices`` entries to the new port."""
         if not self.config_file.exists():
             return
         content = self.config_file.read_text(encoding="utf-8")
@@ -328,10 +286,9 @@ class ConnectionMonitor:
             new_lines.append(line)
         self.config_file.write_text("\n".join(new_lines), encoding="utf-8")
 
-    # -- main check / loop ---------------------------------------------------
 
     def check(self) -> list[Change]:
-        """One probe→detect→react cycle. Returns the changes observed."""
+        """Probe, diff, react; return the changes."""
         current = self.get_current_state()
         changes = detect_changes(self.last_state, current)
 
@@ -348,7 +305,7 @@ class ConnectionMonitor:
         return changes
 
     def run(self, *, interval_s: int = 10) -> None:
-        """Continuous monitor loop — terminates on KeyboardInterrupt."""
+        """Continuous loop; stops on KeyboardInterrupt."""
         self.log("[MONITOR_START] Connection monitor started")
         self.notifier("ADB Monitor", "Monitoring started")
         while True:

@@ -1,19 +1,4 @@
-"""High-level workflow automation, app testing, and device management.
-
-Doctrine note
--------------
-- Composes against :class:`ADBController`'s public API only (Law 2).
-- ``time.sleep`` is referenced via the module-level ``_sleep`` alias so
-  tests can monkey-patch it without touching real wall-clock.
-- ``_execute_step`` always returns a :class:`StepOutcome` (never the
-  bool|str union the v1.0 implementation returned) — typed result.
-
-Step dispatch
--------------
-Step kinds are looked up in a frozen dictionary at module load.
-Adding a new step kind = add an entry to ``_STEP_HANDLERS`` and
-the corresponding test row in ``test_automation.py``.
-"""
+"""High-level workflow automation, app testing, and device management."""
 
 from __future__ import annotations
 
@@ -39,18 +24,11 @@ _sleep: Callable[[float], None] = time.sleep
 _now: Callable[[], float] = time.monotonic
 
 
-# ---------------------------------------------------------------------------
-# Value types
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class AutomationStep:
-    """One step in a workflow.
-
-    ``params`` is intentionally a plain dict (not typed) so workflows
-    can be authored as JSON. Validation happens at dispatch time.
-    """
+    """One step in a workflow."""
 
     action: str
     params: dict[str, Any] = field(default_factory=dict)
@@ -79,9 +57,7 @@ class AutomationResult:
     screenshots: tuple[str, ...] = ()
 
 
-# ---------------------------------------------------------------------------
 # Core automation engine
-# ---------------------------------------------------------------------------
 
 
 class ADBAutomation:
@@ -96,7 +72,6 @@ class ADBAutomation:
         self.adb: ADBController = adb if adb is not None else ADBController(device_serial)
         self.screen_width, self.screen_height = self.adb.get_screen_size()
 
-    # -- step handlers (one per action kind, all return StepOutcome) ----------
 
     def _do_tap(self, params: dict[str, Any]) -> StepOutcome:
         x = int(params.get("x", self.screen_width // 2))
@@ -215,7 +190,6 @@ class ADBAutomation:
         self.adb.shell(str(params.get("command", "")))
         return StepOutcome(success=True)
 
-    # -- dispatch ------------------------------------------------------------
 
     @property
     def _handlers(self) -> dict[str, Callable[[dict[str, Any]], StepOutcome]]:
@@ -300,16 +274,7 @@ class ADBAutomation:
         )
 
     def run_from_json(self, json_path: str | Path) -> AutomationResult:
-        """Load steps from a JSON file and execute them.
-
-        Expected JSON shape::
-
-            {"steps": [
-                {"action": "tap", "params": {"x": 100, "y": 200}, "delay": 0.5,
-                 "description": "tap the button"},
-                ...
-            ]}
-        """
+        """Load steps from a JSON file and execute them."""
         data = json.loads(Path(json_path).read_text(encoding="utf-8"))
         steps = [
             AutomationStep(
@@ -323,9 +288,7 @@ class ADBAutomation:
         return self.run_workflow(steps)
 
 
-# ---------------------------------------------------------------------------
 # AppTester — install / launch / smoke / stress
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -408,9 +371,7 @@ class AppTester(ADBAutomation):
         }
 
 
-# ---------------------------------------------------------------------------
 # DeviceManager — health / cleanup / batch ops
-# ---------------------------------------------------------------------------
 
 
 class DeviceManager(ADBAutomation):
@@ -511,9 +472,7 @@ class DeviceManager(ADBAutomation):
         return extracted
 
 
-# ---------------------------------------------------------------------------
 # ScreenRecorder — independent of ADBAutomation (different lifecycle)
-# ---------------------------------------------------------------------------
 
 
 class ScreenRecorder:

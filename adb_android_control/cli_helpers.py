@@ -1,9 +1,4 @@
-"""CLI print helpers used by the ``adb-control`` console script.
-
-These helpers live inside the package so the console script works after
-``pip install`` even though ``scripts/`` is not packaged. The standalone
-tools under ``scripts/`` keep their own equivalent helpers for direct use.
-"""
+"""CLI print helpers used by the ``adb-control`` console script."""
 
 from __future__ import annotations
 
@@ -23,17 +18,11 @@ if TYPE_CHECKING:
 
 
 def _line(text: str = "") -> None:
-    """Write a single line of CLI output to stdout.
-
-    Used instead of ``print`` so this module needs no print-lint suppression
-    while producing identical terminal output.
-    """
+    """Write a single line of CLI output to stdout."""
     sys.stdout.write(f"{text}\n")
 
 
-# ---------------------------------------------------------------------------
 # Monitor helpers
-# ---------------------------------------------------------------------------
 
 _LEVEL_COLORS: dict[str, str] = {
     "VERBOSE": "\033[37m",
@@ -62,9 +51,7 @@ def print_snapshot(snapshot: PerformanceSnapshot) -> None:
     _line(f"Processes: {snapshot.running_processes}")
 
 
-# ---------------------------------------------------------------------------
 # Radio helpers
-# ---------------------------------------------------------------------------
 
 _HR = "=" * 60
 
@@ -193,9 +180,7 @@ def print_radio_capabilities(scanner: RadioScanner | None = None) -> None:
     _line()
 
 
-# ---------------------------------------------------------------------------
 # Connection helpers
-# ---------------------------------------------------------------------------
 
 
 def status(monitor: ConnectionMonitor) -> None:
