@@ -1,7 +1,22 @@
 # Certification
 
-**Certified:** 2026-08-10 · Version 2.0.3 · Commit `pending`
-**Result:** ✅ PASS — all gates green, smoke + e2e shakedown complete.
+**Certified:** 2026-08-10 · Version 2.0.3 · Commit `343ddb6`
+**Result:** ✅ **PRODUCTION CERTIFIED** — all gates green, smoke + e2e shakedown complete, live-device verified.
+
+## Production declaration
+
+`adb-android-control` v2.0.3 is **certified for production use** — defined as: reliable for real-world device automation from desktop or Termux (control, screenshots, monitoring, workflows, radio/connection scanning) with the following recorded scope and conditions:
+
+**In scope:**
+- Single/multi device control over USB and Wi-Fi (Android 11+ wireless debugging, dynamic per-session port discovery)
+- CLI (`adb-control`) and Python API (`ADBController`)
+- Termux autoconnect service, JSON workflow runner, monitoring, radio, connection management
+
+**Conditions / exclusions (by design, not defects):**
+- Coverage 63.31% (threshold 30%): device-side (`usb`, parts of `radio`) and error-path branches are the untested remainder — acceptable for the current feature set; raise the bar before any safety-critical use.
+- Requires a working `adb` binary on PATH (platform-tools / android-tools).
+- Wireless debugging ports are session-scoped — the package auto-discovers them per session; a saved `~/.adb_devices` entry is a hint, never a guarantee.
+- Device (`integration`/`device` marker) tests need a real device and are not part of the CI unit gate.
 
 ## Test matrix
 
@@ -9,6 +24,7 @@
 |---|---|
 | Unit tests | 312 passed |
 | Full suite (unit + property + race) | 350 passed |
+| Coverage | 63.31% (threshold 30%) |
 | Import smoke (all 10 modules) | OK |
 | CLI smoke (all 9 subcommands) | OK |
 | mypy --strict | 0 errors |
