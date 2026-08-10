@@ -267,13 +267,13 @@ def _add_scan_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--end", type=int, default=50000)
 
 
-def _add_shot_parser(sub: argparse._SubParsersAction) -> None:
+def _add_shot_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("shot", help="Take a screenshot")
     p.add_argument("path", nargs="?", help="Output path (default: screenshot.png)")
     p.set_defaults(func=cmd_shot)
 
 
-def _add_monitor_parser(sub: argparse._SubParsersAction) -> None:
+def _add_monitor_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("monitor", help="Real-time monitoring")
     p.add_argument("mode", choices=["logcat", "perf", "events", "crash"])
     p.add_argument(
@@ -287,33 +287,33 @@ def _add_monitor_parser(sub: argparse._SubParsersAction) -> None:
     p.set_defaults(func=cmd_monitor)
 
 
-def _add_workflow_parser(sub: argparse._SubParsersAction) -> None:
+def _add_workflow_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("workflow", help="Run a JSON workflow")
     p.add_argument("path", help="Path to workflow.json")
     p.set_defaults(func=cmd_workflow)
 
 
-def _add_radio_parser(sub: argparse._SubParsersAction) -> None:
+def _add_radio_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("radio", help="Radio scanner (wifi/bluetooth/caps)")
     p.add_argument("sections", nargs="*", help="One or more of: wifi scan bluetooth caps all")
     p.set_defaults(func=cmd_radio)
 
 
-def _add_connection_parser(sub: argparse._SubParsersAction) -> None:
+def _add_connection_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("connection", help="Connection monitor")
     p.add_argument("subcommand", nargs="?", choices=["status", "check", "run"])
     p.add_argument("-i", "--interval", type=int, default=10)
     p.set_defaults(func=cmd_connection)
 
 
-def _add_scan_port_parser(sub: argparse._SubParsersAction) -> None:
+def _add_scan_port_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("scan-port", help="Scan an IP for ADB port")
     p.add_argument("ip")
     _add_scan_args(p)
     p.set_defaults(func=cmd_scan_port)
 
 
-def _add_connect_parser(sub: argparse._SubParsersAction) -> None:
+def _add_connect_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     p = sub.add_parser("connect", help="Discover and connect a device by name")
     p.add_argument("name", help="Device name from ~/.adb_devices")
     p.add_argument("ip", nargs="?", help="IP override (default: from ~/.adb_devices)")

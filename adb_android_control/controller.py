@@ -9,6 +9,7 @@ import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Literal, overload
 
 logger = logging.getLogger(__name__)
 # No logging.basicConfig — leave that to apps.
@@ -77,6 +78,18 @@ def _validate_identifier(value: str, name: str = "identifier") -> None:
     """Raise ValueError for unsafe identifiers."""
     if not _IDENTIFIER_RE.fullmatch(value):
         raise ValueError(f"Invalid {name}: {value!r}")
+
+
+@overload
+def _adb_run(
+    args: list[str], *, timeout: int = DEFAULT_TIMEOUT_S, text: Literal[True] = True
+) -> subprocess.CompletedProcess[str]: ...
+
+
+@overload
+def _adb_run(
+    args: list[str], *, timeout: int = DEFAULT_TIMEOUT_S, text: Literal[False]
+) -> subprocess.CompletedProcess[bytes]: ...
 
 
 def _adb_run(
