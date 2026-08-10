@@ -105,6 +105,19 @@ class LogcatMonitor:
             raw=line,
         )
 
+    def _logcat_argv(self, *, filter_level: str, filter_tags: list[str] | None) -> list[str]:
+        """Build the ``adb logcat`` argv with the requested filters."""
+        cmd: list[str] = ["adb"]
+        if self.device_serial is not None:
+            cmd.extend(["-s", self.device_serial])
+        cmd.extend(["logcat", "-v", "threadtime"])
+        if filter_level != "V":
+            cmd.append(f"*:{filter_level}")
+        if filter_tags:
+            for tag in filter_tags:
+                cmd.extend(["-s", f"{tag}:*"])
+        return cmd
+
     def start(
         self,
         *,
@@ -115,18 +128,8 @@ class LogcatMonitor:
         if self.running:
             return
 
-        cmd: list[str] = ["adb"]
-        if self.device_serial is not None:
-            cmd.extend(["-s", self.device_serial])
-        cmd.extend(["logcat", "-v", "threadtime"])
-        if filter_level != "V":
-            cmd.append(f"*:{filter_level}")
-        if filter_tags:
-            for tag in filter_tags:
-                cmd.extend(["-s", f"{tag}:*"])
-
         self.process = subprocess.Popen(
-            cmd,
+            self._logcat_argv(filter_level=filter_level, filter_tags=filter_tags),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

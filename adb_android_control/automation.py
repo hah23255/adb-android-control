@@ -246,6 +246,24 @@ class ADBAutomation:
             return outcome, None
         return outcome, f"Step {index + 1} ({step.action}): {outcome.error or 'failed'}"
 
+    def _build_result(
+        self,
+        steps: list[AutomationStep],
+        start_time: float,
+        completed: int,
+        errors: list[str],
+        screenshots: list[str],
+    ) -> AutomationResult:
+        """Build an :class:`AutomationResult` summary."""
+        return AutomationResult(
+            success=not errors,
+            steps_completed=completed,
+            total_steps=len(steps),
+            duration_s=_now() - start_time,
+            errors=tuple(errors),
+            screenshots=tuple(screenshots),
+        )
+
     def run_workflow(
         self,
         steps: list[AutomationStep],
@@ -269,14 +287,7 @@ class ADBAutomation:
                 if stop_on_error:
                     break
 
-        return AutomationResult(
-            success=not errors,
-            steps_completed=completed,
-            total_steps=len(steps),
-            duration_s=_now() - start_time,
-            errors=tuple(errors),
-            screenshots=tuple(screenshots),
-        )
+        return self._build_result(steps, start_time, completed, errors, screenshots)
 
     def run_from_json(self, json_path: str | Path) -> AutomationResult:
         """Load steps from a JSON file and execute them."""

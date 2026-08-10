@@ -68,34 +68,51 @@ def cmd_shot(args: argparse.Namespace) -> int:
     return 0 if ctrl.screenshot(path) else 1
 
 
-def cmd_monitor(args: argparse.Namespace) -> int:
-    # Lazy import to avoid loading threading code unless requested
-    from adb_android_control.monitor import (
-        CrashEvent,
-        CrashMonitor,
-        EventMonitor,
-        LogcatMonitor,
-        PerformanceMonitor,
+def _monitor_logcat(args: argparse.Namespace) -> None:
+    """Stream logcat to stdout with a level filter."""
+    from adb_android_control.cli_helpers import print_log_entry
+    from adb_android_control.monitor import LogcatMonitor
+
+    LogcatMonitor(args.serial).stream_logs(print_log_entry, filter_level=args.level)
+
+
+def _monitor_perf(args: argparse.Namespace) -> None:
+    """Print periodic performance snapshots."""
+    from adb_android_control.cli_helpers import print_snapshot
+    from adb_android_control.monitor import PerformanceMonitor
+
+    PerformanceMonitor(args.serial).start_monitoring(
+        interval_s=args.interval, callback=print_snapshot
     )
 
+
+def _monitor_events(args: argparse.Namespace) -> None:
+    """Stream input events."""
+    from adb_android_control.monitor import EventMonitor
+
+    EventMonitor(args.serial).start_event_capture()
+
+
+def _monitor_crash(args: argparse.Namespace) -> None:
+    """Watch for crash log entries."""
+    from adb_android_control.monitor import CrashEvent, CrashMonitor
+
+    def _on_crash(c: CrashEvent) -> None:
+        print(f"!!! CRASH: [{c.tag}] {c.message}")
+
+    CrashMonitor(args.serial).start(callback=_on_crash)
+
+
+def cmd_monitor(args: argparse.Namespace) -> int:
+    # Lazy import to avoid loading threading code unless requested
     if args.mode == "logcat":
-        from adb_android_control.cli_helpers import print_log_entry
-
-        LogcatMonitor(args.serial).stream_logs(print_log_entry, filter_level=args.level)
+        _monitor_logcat(args)
     elif args.mode == "perf":
-        from adb_android_control.cli_helpers import print_snapshot
-
-        PerformanceMonitor(args.serial).start_monitoring(
-            interval_s=args.interval, callback=print_snapshot
-        )
+        _monitor_perf(args)
     elif args.mode == "events":
-        EventMonitor(args.serial).start_event_capture()
+        _monitor_events(args)
     elif args.mode == "crash":
-
-        def _on_crash(c: CrashEvent) -> None:
-            print(f"!!! CRASH: [{c.tag}] {c.message}")
-
-        CrashMonitor(args.serial).start(callback=_on_crash)
+        _monitor_crash(args)
     return 0
 
 
@@ -189,8 +206,8 @@ def _device_ip_from_config(config: Path, name: str) -> str | None:
     return None
 
 
-def cmd_connect(args: argparse.Namespace) -> int:
-    """Discover and connect to a configured device by name."""
+def _connect_device(config: Path, state: Path, name: str, ip: str, args: argparse.Namespace) -> int:
+    """Discover the ADB port, connect, persist state, and print the result."""
     from adb_android_control.port_scan import (
         connect_auto,
         read_last_port,
@@ -198,6 +215,25 @@ def cmd_connect(args: argparse.Namespace) -> int:
         update_device_entry,
     )
 
+    hint = read_last_port(state)
+    port = connect_auto(
+        ip,
+        hint_port=hint,
+        start=args.start,
+        end=args.end,
+        max_workers=args.workers,
+    )
+    if port:
+        save_last_port(state, port)
+        update_device_entry(config, name=name, ip=ip)
+        print(f"Connected: {name} at {ip}:{port}")
+        return 0
+    print(f"No ADB port found on {ip} in {args.start}-{args.end}")
+    return 1
+
+
+def cmd_connect(args: argparse.Namespace) -> int:
+    """Discover and connect to a configured device by name."""
     home = Path.home()
     config = home / ".adb_devices"
     state = home / ".adb_last_port"
@@ -212,21 +248,7 @@ def cmd_connect(args: argparse.Namespace) -> int:
             print(f"Device '{args.name}' not found in {config}.")
             return 1
 
-    hint = read_last_port(state)
-    port = connect_auto(
-        ip,
-        hint_port=hint,
-        start=args.start,
-        end=args.end,
-        max_workers=args.workers,
-    )
-    if port:
-        save_last_port(state, port)
-        update_device_entry(config, name=args.name, ip=ip)
-        print(f"Connected: {args.name} at {ip}:{port}")
-        return 0
-    print(f"No ADB port found on {ip} in {args.start}-{args.end}")
-    return 1
+    return _connect_device(config, state, args.name, ip, args)
 
 
 # Argparse wiring

@@ -326,15 +326,26 @@ class ADBController:
         cmd = "rm -rf" if recursive else "rm"
         self._shell(f"{cmd} {shlex.quote(path)}")
 
-    def screenshot(self, local_path: str | Path = "screenshot.png") -> bool:
-        """Capture the device screen."""
+    def _screencap_argv(self) -> list[str]:
+        """Build the ``adb exec-out screencap`` argv."""
         argv: list[str] = ["adb"]
         if self.device_serial is not None:
             argv.extend(["-s", self.device_serial])
         argv.extend(["exec-out", "screencap", "-p"])
+        return argv
 
+    @staticmethod
+    def _extract_png(data: bytes) -> bytes | None:
+        """Return the PNG payload (stripping any leading banner)."""
+        offset = data.find(_PNG_SIGNATURE)
+        if offset < 0:
+            return None
+        return data[offset:] if offset > 0 else data
+
+    def screenshot(self, local_path: str | Path = "screenshot.png") -> bool:
+        """Capture the device screen."""
         try:
-            result = _adb_run(argv, text=False)
+            result = _adb_run(self._screencap_argv(), text=False)
         except ADBError as exc:
             logger.error("Screenshot failed: %s", exc)
             return False
@@ -348,18 +359,14 @@ class ADBController:
             logger.error("Screenshot failed (rc=%d): %s", result.returncode, stderr)
             return False
 
-        png = result.stdout
-        offset = png.find(_PNG_SIGNATURE)
-        if offset < 0:
+        png = self._extract_png(result.stdout)
+        if png is None:
             logger.error(
                 "Screenshot produced no PNG data (%d bytes captured); stderr: %s",
-                len(png),
+                len(result.stdout),
                 stderr,
             )
             return False
-        if offset > 0:
-            logger.warning("Stripped %d non-PNG byte(s) preceding the screencap image", offset)
-            png = png[offset:]
 
         Path(local_path).write_bytes(png)
         return True
